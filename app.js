@@ -33,7 +33,7 @@ function App(){
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
 
-  // ---- Auth listener
+  // ---- Auth
   React.useEffect(()=>{
     return firebase.auth().onAuthStateChanged(u=>{
       setUser(u);
@@ -53,11 +53,11 @@ function App(){
         setHistory([]); setBalance(0);
       }
       setLoaded(true);
-    }, err=>console.error("onSnapshot error:", err));
+    }, err => console.error("onSnapshot error:", err));
     return ()=>unsub();
   },[user]);
 
-  // ---- Save after first load
+  // ---- Save
   React.useEffect(()=>{
     if(!loaded || !user) return;
     db.collection("users").doc(user.uid).set({ balance, history })
@@ -79,7 +79,7 @@ function App(){
   };
   const logout = async ()=>{ await firebase.auth().signOut(); };
 
-  // ---- App actions
+  // ---- App logic
   const addGrade = ()=>{
     if(!user) return alert("Сначала войдите в аккаунт");
     const date = new Date().toLocaleDateString("ru-RU");
@@ -87,19 +87,20 @@ function App(){
     let bonus = 1;
     let bonusDesc = "";
 
+    // дневные бонусы
     const todayGrades = history.filter(h=>h.date===date);
     const todayFives = todayGrades.filter(h=>h.grade===5).length;
     if(grade===5 && todayFives===1){ bonus=2; bonusDesc="Удвоение за 2 пятёрки за день"; }
     if(grade===5 && todayFives===2){ bonus=3; bonusDesc="Утроение за 3 пятёрки за день"; }
 
+    // серии по предмету
     const sameSubject = history.filter(h=>h.subject===selectedSubject);
-    const lastTwo = sameSubject.slice(-2);
-    const lastGrades = lastTwo.map(e=>e.grade);
+    const lastTwo = sameSubject.slice(-2).map(e=>e.grade);
     if(grade===5){
-      if(lastGrades.length>=2 && lastGrades[0]===5 && lastGrades[1]===5){
+      if(lastTwo.length>=2 && lastTwo[0]===5 && lastTwo[1]===5){
         bonus=3.5; bonusDesc="Хет-трик 3 пятёрки подряд по предмету";
-      }else if(lastGrades.length>=1 && lastGrades[0]===5){
-        bonus=2.5; bonusDesc="Бонус 2.5 за 2 пятёрки подряд по предмету";
+      }else if(lastTwo.length>=1 && lastTwo[0]===5){
+        bonus=2.5; bonusDesc="Бонус 2.5 за 2 подряд по предмету";
       }
     }
 
@@ -131,8 +132,16 @@ function App(){
   const exportCSV = ()=>{
     if(!history || history.length===0){ alert("История пуста"); return; }
     const header = ["Дата","Предмет","Оценка","Бонус","Сумма"];
-    const rows = history.map(h=>[h.date||"", h.subject||"", h.grade||"", h.bonus||"", (h.reward||"")]);
-    const csv = [header, ...rows].map(r=>r.map(i=>`"${String(i).replace(/"/g,'""')}"`).join(",")).join("\n");
+    const rows = history.map(h=>[
+      h.date || "",
+      h.subject || "",
+      h.grade || "",
+      h.bonus || "",
+      (typeof h.reward === "number" ? h.reward : "")
+    ]);
+    const csv = [header, ...rows]
+      .map(r=>r.map(i=>`"${String(i).replace(/"/g,'""')}"`).join(","))
+      .join("\n");
     const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -148,24 +157,31 @@ function App(){
       const lines = text.trim().split(/\r?\n/);
       if(lines.length<2) return alert("Файл пуст или неверный формат");
       const data = lines.slice(1).map(line=>{
-        const p = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(x=>x.replace(/^"|"$/g,'').replace(/""/g,'"'));
+        const p = line
+          .split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/)
+          .map(x=>x.replace(/^"|"$/g,'').replace(/""/g,'"'));
         return {date:p[0], subject:p[1], grade:p[2], bonus:p[3], reward:Number(p[4])};
       });
       const total = data.reduce((s,x)=>s+(isFinite(x.reward)?x.reward:0),0);
       if(window.confirm("Загрузить историю из файла и заменить текущую?")){
         setHistory(data); setBalance(total);
       }
+      // сбрасываем value, чтобы можно было выбрать тот же файл повторно
+      const input = document.getElementById('importFile');
+      if (input) input.value = "";
     };
     reader.readAsText(file,'UTF-8');
   };
 
-  // Sidebar listeners
+  // ---- Sidebar listeners (панель, экспорт/импорт)
   React.useEffect(()=>{
     const burger = document.getElementById('burgerBtn');
     const sidebar = document.getElementById('sidebar');
     const close = document.getElementById('closeSidebar');
     const exportBtn = document.getElementById('exportBtn');
     const importFile = document.getElementById('importFile');
+
+    if(!burger || !sidebar || !close || !exportBtn || !importFile) return;
 
     const open = ()=>sidebar.classList.add('open');
     const closeFn = ()=>sidebar.classList.remove('open');
@@ -183,8 +199,9 @@ function App(){
       exportBtn.removeEventListener('click', onExport);
       importFile.removeEventListener('change', onImportChange);
     };
-  },[history, user]);
+  },[history, user]); // зависимость нужна, чтобы экспорт видел актуальные данные
 
+  // ---- UI
   return (
     <div className="stack container">
       {!user ? (
@@ -256,7 +273,7 @@ function App(){
                   <div style={{minWidth:'90px', textAlign:'right', fontWeight:700}}>
                     {h.reward>=0?`+${h.reward}`:`${h.reward}`} ₽
                   </div>
-                  <button className="icon-btn" title="Удалить" onClick={()=>deleteEntry(i)}>
+                  <button className="text-btn" title="Удалить" onClick={()=>deleteEntry(i)}>
                     <span className="material-icons">delete</span>
                   </button>
                 </div>
