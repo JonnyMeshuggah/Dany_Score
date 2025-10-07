@@ -6,13 +6,13 @@
   <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+
   <style>
-    body {
-      font-family: sans-serif;
-      max-width: 700px;
-      margin: 40px auto;
-      padding: 0 10px;
-    }
+    body { font-family: sans-serif; max-width: 700px; margin: 40px auto; padding: 0 10px; }
     h1 { text-align: center; }
     form { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
     select, input, button { padding: 6px 8px; font-size: 16px; }
@@ -88,17 +88,44 @@
       "Русский язык","Технология","Физика","Физкультура"
     ];
 
+    // Инициализация Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyBCHpZRZddZwDrK0xVXXReGuEbJvkq9lQU",
+      authDomain: "dany-school-gamification.firebaseapp.com",
+      projectId: "dany-school-gamification",
+      storageBucket: "dany-school-gamification.firebasestorage.app",
+      messagingSenderId: "727126449185",
+      appId: "1:727126449185:web:d7c5cef17d98d57dead760",
+      measurementId: "G-D6EYQVZ9D4"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
     function App() {
       const [subjects] = React.useState(SUBJECTS);
       const [selectedSubject, setSelectedSubject] = React.useState(subjects[0]);
       const [grade, setGrade] = React.useState(5);
-      const [balance, setBalance] = React.useState(() => Number(localStorage.getItem("balance") || 0));
-      const [history, setHistory] = React.useState(() => JSON.parse(localStorage.getItem("history") || "[]"));
+      const [balance, setBalance] = React.useState(0);
+      const [history, setHistory] = React.useState([]);
       const [cashOutAmount, setCashOutAmount] = React.useState("");
 
+      // --- Загрузка данных из Firestore ---
       React.useEffect(() => {
-        localStorage.setItem("balance", balance);
-        localStorage.setItem("history", JSON.stringify(history));
+        db.collection("users").doc("default_user").get().then(doc => {
+          if (doc.exists) {
+            const data = doc.data();
+            if (data.history) setHistory(data.history);
+            if (data.balance !== undefined) setBalance(data.balance);
+          }
+        });
+      }, []);
+
+      // --- Сохранение данных в Firestore ---
+      React.useEffect(() => {
+        db.collection("users").doc("default_user").set({
+          balance: balance,
+          history: history
+        });
       }, [balance, history]);
 
       const addGrade = () => {
@@ -231,7 +258,7 @@
 
           <h2>Баланс: {balance} ₽</h2>
           <div className="cashout-area">
-            <input className="cashout-input" type="number" placeholder="Сумма" value={cashOutAmount} onChange={e=>setCashOutAmount(e.target.value)} />
+            <input className="cashout-input" type="number" placeholder="Сумма вывода" value={cashOutAmount} onChange={e=>setCashOutAmount(e.target.value)} />
             <button className="cashout-btn" onClick={cashOut}>💸 Вывести в кэш</button>
           </div>
 
@@ -257,4 +284,3 @@
   </script>
 </body>
 </html>
-
