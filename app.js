@@ -190,22 +190,11 @@ React.useEffect(()=>{
   const onImportChange = e => { if(e.target.files[0]) importCSV(e.target.files[0]); };
   const onFaq = ()=>{ setShowFAQ(true); closeFn(); };
 
-  // -- Клик снаружи панели
-  const clickOutside = (e)=>{
-    // если панель открыта и клик не по панели и не по бургеру
-    if(sidebar.classList.contains('open') &&
-       !sidebar.contains(e.target) &&
-       !burger.contains(e.target)){
-      sidebar.classList.remove('open');
-    }
-  };
-
   burger.addEventListener('click', open);
   close.addEventListener('click', closeFn);
   exportBtn.addEventListener('click', onExport);
   importFile.addEventListener('change', onImportChange);
   faqBtn.addEventListener('click', onFaq);
-  document.addEventListener('click', clickOutside);
 
   return ()=>{
     burger.removeEventListener('click', open);
@@ -213,7 +202,6 @@ React.useEffect(()=>{
     exportBtn.removeEventListener('click', onExport);
     importFile.removeEventListener('change', onImportChange);
     faqBtn.removeEventListener('click', onFaq);
-    document.removeEventListener('click', clickOutside);
   };
 },[history, user]);
   
