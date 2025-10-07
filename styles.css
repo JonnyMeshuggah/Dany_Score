@@ -12,26 +12,8 @@ body {
   background: var(--md-bg);
   color: var(--md-text);
   margin: 0;
-  padding: 80px 16px 40px; /* место под шапку */
+  padding: 80px 16px 40px;
 }
-
-/* ==== Top bar ==== */
-.topbar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 64px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: #fff;
-  box-shadow: 0 2px 8px rgba(0,0,0,.08);
-  padding: 0 16px;
-  z-index: 1100;
-}
-.topbar .title { font-weight: 700; letter-spacing: .3px; }
-.topbar .spacer { flex: 1 }
 
 /* ==== Buttons ==== */
 button {
@@ -79,7 +61,7 @@ input:focus, select:focus {
   padding: 16px;
 }
 
-/* ==== Auth card ==== */
+/* ==== Auth ==== */
 .auth-card {
   max-width: 420px;
   margin: 24px auto;
@@ -93,7 +75,6 @@ input:focus, select:focus {
 .auth-fields { display: flex; flex-direction: column; gap: 12px; margin-bottom: 12px; }
 .auth-actions { display: flex; gap: 10px; justify-content: space-between; }
 
-/* ==== Layout ==== */
 .container { max-width: 900px; margin: 0 auto; }
 .row { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
 .stack { display: flex; flex-direction: column; gap: 12px; }
@@ -175,6 +156,7 @@ input:focus, select:focus {
   align-items: center;
   justify-content: center;
   z-index: 2100;
+  cursor: pointer;
 }
 .burger:hover { background: rgba(0,0,0,0.06); }
 
@@ -192,8 +174,10 @@ input:focus, select:focus {
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
 }
 .close-btn:hover { background: rgba(255,255,255,0.12); }
 
 /* ==== Misc ==== */
+.file-input { display: none; }
 .muted { color: var(--md-text-muted); }
