@@ -174,37 +174,33 @@ function App(){
   };
 
   // ---- Sidebar listeners (панель, экспорт/импорт)
-React.useEffect(()=>{
-  const burger = document.getElementById('burgerBtn');
-  const sidebar = document.getElementById('sidebar');
-  const close = document.getElementById('closeSidebar');
-  const exportBtn = document.getElementById('exportBtn');
-  const importFile = document.getElementById('importFile');
-  const faqBtn = document.getElementById('faqBtn');
+  React.useEffect(()=>{
+    const burger = document.getElementById('burgerBtn');
+    const sidebar = document.getElementById('sidebar');
+    const close = document.getElementById('closeSidebar');
+    const exportBtn = document.getElementById('exportBtn');
+    const importFile = document.getElementById('importFile');
 
-  if(!burger || !sidebar || !close || !exportBtn || !importFile || !faqBtn) return;
+    if(!burger || !sidebar || !close || !exportBtn || !importFile) return;
 
-  const open = ()=>sidebar.classList.add('open');
-  const closeFn = ()=>sidebar.classList.remove('open');
-  const onExport = ()=>exportCSV();
-  const onImportChange = e => { if(e.target.files[0]) importCSV(e.target.files[0]); };
-  const onFaq = ()=>{ setShowFAQ(true); closeFn(); };
+    const open = ()=>sidebar.classList.add('open');
+    const closeFn = ()=>sidebar.classList.remove('open');
+    const onExport = ()=>exportCSV();
+    const onImportChange = (e)=>{ if(e.target.files[0]) importCSV(e.target.files[0]); };
 
-  burger.addEventListener('click', open);
-  close.addEventListener('click', closeFn);
-  exportBtn.addEventListener('click', onExport);
-  importFile.addEventListener('change', onImportChange);
-  faqBtn.addEventListener('click', onFaq);
+    burger.addEventListener('click', open);
+    close.addEventListener('click', closeFn);
+    exportBtn.addEventListener('click', onExport);
+    importFile.addEventListener('change', onImportChange);
 
-  return ()=>{
-    burger.removeEventListener('click', open);
-    close.removeEventListener('click', closeFn);
-    exportBtn.removeEventListener('click', onExport);
-    importFile.removeEventListener('change', onImportChange);
-    faqBtn.removeEventListener('click', onFaq);
-  };
-},[history, user]);
-  
+    return ()=>{
+      burger.removeEventListener('click', open);
+      close.removeEventListener('click', closeFn);
+      exportBtn.removeEventListener('click', onExport);
+      importFile.removeEventListener('change', onImportChange);
+    };
+  },[history, user]); // зависимость нужна, чтобы экспорт видел актуальные данные
+
   // ---- UI
   return (
     <div className="stack container">
