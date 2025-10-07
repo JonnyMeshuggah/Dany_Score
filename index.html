@@ -10,6 +10,7 @@
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
 
   <style>
     body { font-family: sans-serif; max-width: 700px; margin: 40px auto; padding: 0 10px; }
@@ -46,30 +47,19 @@
     .sidebar.open { transform: translateX(0); }
     .sidebar h2 { color:#fff; font-size:18px; margin: 0 0 16px 0; }
 
-   .panel-btn {
-  display: block;
-  width: 100%;
-  margin-bottom: 10px;
-  padding: 10px 14px;
-  font-size: 16px;
-  background: none;
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 6px;
-  text-align: left;
-  box-sizing: border-box;
-  cursor: pointer;
-  transition: background 0.2s, border 0.2s;
-}
+    .panel-btn {
+      display:block; width:100%;
+      margin-bottom:10px; padding:10px 14px; font-size:16px;
+      background:none; color: #fff;
+      border:1px solid rgba(255,255,255,0.3);
+      border-radius:6px; text-align:left; box-sizing:border-box;
+    }
+    .panel-btn:hover {
+      background: rgba(255,255,255,0.1);
+      border-color: rgba(255,255,255,0.5);
+    }
 
-.panel-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.5);
-}
-    
-.file-input {
-  display: none;
-}
+    .file-input { display:none; }
 
     .burger {
       position: fixed; top:20px; left:20px;
@@ -123,31 +113,53 @@
       const [history, setHistory] = React.useState([]);
       const [cashOutAmount, setCashOutAmount] = React.useState("");
       const [loaded, setLoaded] = React.useState(false);
+      const [user, setUser] = React.useState(null);
+      const [email, setEmail] = React.useState("");
+      const [password, setPassword] = React.useState("");
 
-      // Подписка на Firestore (реальное время)
+      // auth listener
       React.useEffect(() => {
-        const unsub = db.collection("users").doc("default_user").onSnapshot(doc => {
-          console.log("🔥 SNAPSHOT", doc.exists, doc.data());
-          if (doc.exists) {
-            const data = doc.data();
-            if (data.history) setHistory(data.history);
-            if (data.balance !== undefined) setBalance(data.balance);
+        return firebase.auth().onAuthStateChanged((u) => {
+          setUser(u);
+          if (!u) {
+            setHistory([]);
+            setBalance(0);
           }
-          setLoaded(true); // данные пришли
-        }, err => console.error("Ошибка подписки:", err));
-        return () => unsub();
+        });
       }, []);
 
-      // Сохраняем в Firestore только после первой загрузки
+      // load user data
       React.useEffect(() => {
-        if (!loaded) return;
-        db.collection("users").doc("default_user").set({
-          balance,
-          history
-        })
-        .then(()=>console.log("Firebase save ok", {balance,history}))
-        .catch(err=>console.error("Ошибка сохранения:",err));
-      }, [balance, history, loaded]);
+        if (!user) return;
+        const unsub = db.collection("users").doc(user.uid).onSnapshot(doc => {
+          if (doc.exists) {
+            const data = doc.data();
+            setHistory(data.history || []);
+            setBalance(data.balance || 0);
+          } else {
+            setHistory([]);
+            setBalance(0);
+          }
+          setLoaded(true);
+        });
+        return () => unsub();
+      }, [user]);
+
+      // save user data
+      React.useEffect(() => {
+        if (!loaded || !user) return;
+        db.collection("users").doc(user.uid).set({ balance, history });
+      }, [balance, history, loaded, user]);
+
+      const register = async () => {
+        try { await firebase.auth().createUserWithEmailAndPassword(email, password); }
+        catch (err) { alert(err.message); }
+      };
+      const login = async () => {
+        try { await firebase.auth().signInWithEmailAndPassword(email, password); }
+        catch (err) { alert(err.message); }
+      };
+      const logout = async () => { await firebase.auth().signOut(); };
 
       const addGrade = () => {
         const date = new Date().toLocaleDateString("ru-RU");
@@ -198,35 +210,22 @@
         }
       };
 
-     const exportCSV = () => {
-  // Проверяем, есть ли данные в истории
-  if (!history || history.length === 0) {
-    alert("История пока пуста — добавь хотя бы одну запись.");
-    return;
-  }
-
-  const header = ["Дата","Предмет","Оценка","Бонус","Сумма"];
-  const rows = history.map(h => [
-    h.date || "",
-    h.subject || "",
-    h.grade || "",
-    h.bonus || "",
-    h.reward !== undefined ? h.reward : ""
-  ]);
-
-  const csvContent = [header, ...rows]
-    .map(row => row.map(item => `"${String(item).replace(/"/g, '""')}"`).join(","))
-    .join("\n");
-
-  const blob = new Blob([csvContent], {type: "text/csv;charset=utf-8;"});
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `history_${new Date().toLocaleDateString("ru-RU")}.csv`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-};
+      const exportCSV = () => {
+        if (!history || history.length === 0) { alert("История пуста"); return; }
+        const header = ["Дата","Предмет","Оценка","Бонус","Сумма"];
+        const rows = history.map(h => [h.date || "", h.subject || "", h.grade || "", h.bonus || "", h.reward ?? ""]);
+        const csvContent = [header, ...rows]
+          .map(row => row.map(item => `"${String(item).replace(/"/g, '""')}"`).join(","))
+          .join("\n");
+        const blob = new Blob([csvContent], {type: "text/csv;charset=utf-8;"});
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `history_${new Date().toLocaleDateString("ru-RU")}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      };
 
       const importCSV = (file) => {
         const reader = new FileReader();
@@ -236,13 +235,7 @@
           if(lines.length < 2) return alert("Файл пустой или неверный формат");
           const data = lines.slice(1).map(line => {
             const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(x => x.replace(/^"|"$/g,'').replace(/""/g,'"'));
-            return {
-              date: parts[0],
-              subject: parts[1],
-              grade: parts[2],
-              bonus: parts[3],
-              reward: Number(parts[4])
-            };
+            return { date: parts[0], subject: parts[1], grade: parts[2], bonus: parts[3], reward: Number(parts[4]) };
           });
           const total = data.reduce((sum, x) => sum + x.reward, 0);
           if(window.confirm("Загрузить историю из файла и заменить текущую?")) {
@@ -253,90 +246,81 @@
         reader.readAsText(file, 'UTF-8');
       };
 
-  React.useEffect(() => {
-  const burger = document.getElementById('burgerBtn');
-  const sidebar = document.getElementById('sidebar');
-  const close = document.getElementById('closeSidebar');
-  const exportBtn = document.getElementById('exportBtn');
-  const importFile = document.getElementById('importFile');
+      React.useEffect(() => {
+        const burger = document.getElementById('burgerBtn');
+        const sidebar = document.getElementById('sidebar');
+        const close = document.getElementById('closeSidebar');
+        const exportBtn = document.getElementById('exportBtn');
+        const importFile = document.getElementById('importFile');
 
-  const open = () => sidebar.classList.add('open');
-  const closeFn = () => sidebar.classList.remove('open');
-  
-  // 👇 теперь экспорт использует актуальное состояние
-  const onExport = () => {
-    if (!history || history.length === 0) {
-      alert("История пока пуста — добавь хотя бы одну запись.");
-      return;
-    }
-    const header = ["Дата","Предмет","Оценка","Бонус","Сумма"];
-    const rows = history.map(h => [
-      h.date || "",
-      h.subject || "",
-      h.grade || "",
-      h.bonus || "",
-      h.reward !== undefined ? h.reward : ""
-    ]);
-    const csvContent = [header, ...rows]
-      .map(row => row.map(item => `"${String(item).replace(/"/g, '""')}"`).join(","))
-      .join("\n");
-    const blob = new Blob([csvContent], {type: "text/csv;charset=utf-8;"});
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `history_${new Date().toLocaleDateString("ru-RU")}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+        const open = () => sidebar.classList.add('open');
+        const closeFn = () => sidebar.classList.remove('open');
+        const onExport = () => exportCSV();
+        const onImportChange = (e) => { if(e.target.files[0]) importCSV(e.target.files[0]); };
 
-  const onImportChange = (e) => { if(e.target.files[0]) importCSV(e.target.files[0]); };
+        burger.addEventListener('click', open);
+        close.addEventListener('click', closeFn);
+        exportBtn.addEventListener('click', onExport);
+        importFile.addEventListener('change', onImportChange);
 
-  burger.addEventListener('click', open);
-  close.addEventListener('click', closeFn);
-  exportBtn.addEventListener('click', onExport);
-  importFile.addEventListener('change', onImportChange);
-
-  return () => {
-    burger.removeEventListener('click', open);
-    close.removeEventListener('click', closeFn);
-    exportBtn.removeEventListener('click', onExport);
-    importFile.removeEventListener('change', onImportChange);
-  };
-}, [history]); // 👈 добавили зависимость history!
+        return () => {
+          burger.removeEventListener('click', open);
+          close.removeEventListener('click', closeFn);
+          exportBtn.removeEventListener('click', onExport);
+          importFile.removeEventListener('change', onImportChange);
+        };
+      }, [history]);
 
       return (
         <div>
-          <form onSubmit={e => {e.preventDefault(); addGrade();}}>
-            <select value={selectedSubject} onChange={e => setSelectedSubject(e.target.value)}>
-              {subjects.map(s => <option key={s}>{s}</option>)}
-            </select>
-            <select value={grade} onChange={e => setGrade(Number(e.target.value))}>
-              {[5,4,3,2].map(g => <option key={g} value={g}>{g}</option>)}
-            </select>
-            <button type="submit">Добавить</button>
-          </form>
+          {!user ? (
+            <div style={{marginBottom:"20px"}}>
+              <input placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} />
+              <input placeholder="Пароль" type="password" value={password} onChange={e=>setPassword(e.target.value)} />
+              <button onClick={login}>Войти</button>
+              <button onClick={register}>Регистрация</button>
+            </div>
+          ) : (
+            <div style={{marginBottom:"20px"}}>
+              <p>Вы вошли как {user.email}</p>
+              <button onClick={logout}>Выйти</button>
+            </div>
+          )}
 
-          <h2>Баланс: {balance} ₽</h2>
-          <div className="cashout-area">
-            <input className="cashout-input" type="number" placeholder="Сумма вывода" value={cashOutAmount} onChange={e=>setCashOutAmount(e.target.value)} />
-            <button className="cashout-btn" onClick={cashOut}>💸 Вывести в кэш</button>
-          </div>
+          {user && (
+            <>
+              <form onSubmit={e => {e.preventDefault(); addGrade();}}>
+                <select value={selectedSubject} onChange={e => setSelectedSubject(e.target.value)}>
+                  {subjects.map(s => <option key={s}>{s}</option>)}
+                </select>
+                <select value={grade} onChange={e => setGrade(Number(e.target.value))}>
+                  {[5,4,3,2].map(g => <option key={g} value={g}>{g}</option>)}
+                </select>
+                <button type="submit">Добавить</button>
+              </form>
 
-          <div className="history">
-            <h3>История</h3>
-            {history.length === 0 && <p>Пока нет оценок.</p>}
-            {history.map((h, i) => (
-              <div key={i} className="entry">
-                <div>
-                  {h.date} — {h.subject}: <strong className={h.reward>=0?"":"negative"}>{h.grade}</strong>
-                  {h.bonus && <span className="bonus"> + {h.bonus}</span>}
-                  → {h.reward>=0?`+${h.reward}`:`${h.reward}`}₽
-                </div>
-                <button className="delete-btn" onClick={() => deleteEntry(i)} title="Удалить">🗑️</button>
+              <h2>Баланс: {balance} ₽</h2>
+              <div className="cashout-area">
+                <input className="cashout-input" type="number" placeholder="Сумма вывода" value={cashOutAmount} onChange={e=>setCashOutAmount(e.target.value)} />
+                <button className="cashout-btn" onClick={cashOut}>💸 Вывести в кэш</button>
               </div>
-            ))}
-          </div>
+
+              <div className="history">
+                <h3>История</h3>
+                {history.length === 0 && <p>Пока нет оценок.</p>}
+                {history.map((h, i) => (
+                  <div key={i} className="entry">
+                    <div>
+                      {h.date} — {h.subject}: <strong className={h.reward>=0?"":"negative"}>{h.grade}</strong>
+                      {h.bonus && <span className="bonus"> + {h.bonus}</span>}
+                      → {h.reward>=0?`+${h.reward}`:`${h.reward}`}₽
+                    </div>
+                    <button className="delete-btn" onClick={() => deleteEntry(i)} title="Удалить">🗑️</button>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       );
     }
@@ -345,6 +329,3 @@
   </script>
 </body>
 </html>
-
-
-
