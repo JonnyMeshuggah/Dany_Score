@@ -46,14 +46,30 @@
     .sidebar.open { transform: translateX(0); }
     .sidebar h2 { color:#fff; font-size:18px; margin: 0 0 16px 0; }
 
-    .panel-btn {
-      display:block; width:100%;
-      margin-bottom:10px; padding:10px 12px; font-size:16px;
-      background: transparent; color: inherit;
-      border: 1px solid rgba(255,255,255,0.25);
-      border-radius:8px; text-align:left;
-    }
-    .file-input { display:none; }
+   .panel-btn {
+  display: block;
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 10px 14px;
+  font-size: 16px;
+  background: none;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  text-align: left;
+  box-sizing: border-box;
+  cursor: pointer;
+  transition: background 0.2s, border 0.2s;
+}
+
+.panel-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+    
+.file-input {
+  display: none;
+}
 
     .burger {
       position: fixed; top:20px; left:20px;
@@ -289,3 +305,4 @@
   </script>
 </body>
 </html>
+
