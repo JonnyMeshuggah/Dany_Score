@@ -80,12 +80,30 @@ input:focus, select:focus {
 
 /* ==== History ==== */
 .history { margin-top: 16px; }
-.entry {
+.history .entry {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start; /* 👈 вместо center */
+  gap: 8px;
+  flex-wrap: wrap; /* 👈 позволяет переносить элементы на маленьком экране */
+  padding: 8px 0;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.history .entry > div:first-child {
+  flex: 1 1 auto;
+  min-width: 160px; /* чтобы текст не сжимался слишком сильно */
+}
+
+.history .entry .row {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid var(--md-border);
-  padding: 10px 0;
+  gap: 4px;
+}
+
+.history .entry .row div {
+  white-space: nowrap;
 }
 .bonus { color: #1b5e20; font-weight: 700; }
 .negative { color: #b00020; }
