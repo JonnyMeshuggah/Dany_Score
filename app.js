@@ -216,7 +216,7 @@ function App(){
             <button onClick={login}>Войти</button>
             <button onClick={register}>Регистрация</button>
           </div>
-          <div className="muted" style={{marginTop:'10px'}}>Войдите, чтобы вести личную историю и баланс.</div>
+          <div className="muted" style={{marginTop:'16px'}}>Учись и заработай на мечту!</div>
         </div>
       ) : (
         <div className="card" style={{display:'flex', alignItems:'center', justifyContent:'space-between', gap:'12px'}}>
