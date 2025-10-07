@@ -107,21 +107,20 @@
       const [history, setHistory] = React.useState([]);
       const [cashOutAmount, setCashOutAmount] = React.useState("");
 
-      // Загрузка данных из Firebase
+      // Подписка на обновления Firestore в реальном времени
       React.useEffect(() => {
-        db.collection("users").doc("default_user").get()
-          .then(doc => {
-            console.log("Firebase load:", doc.exists, doc.data());
-            if (doc.exists) {
-              const data = doc.data();
-              if (data.history) setHistory(data.history);
-              if (data.balance !== undefined) setBalance(data.balance);
-            }
-          })
-          .catch(err => console.error("Ошибка загрузки:", err));
+        const unsub = db.collection("users").doc("default_user").onSnapshot(doc => {
+          console.log("Real-time update:", doc.exists, doc.data());
+          if (doc.exists) {
+            const data = doc.data();
+            if (data.history) setHistory(data.history);
+            if (data.balance !== undefined) setBalance(data.balance);
+          }
+        }, err => console.error("Ошибка подписки:", err));
+        return () => unsub(); // отписка при размонтировании
       }, []);
 
-      // Сохранение данных в Firebase
+      // Сохранение данных в Firestore при каждом изменении
       React.useEffect(() => {
         db.collection("users").doc("default_user").set({
           balance: balance,
