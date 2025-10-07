@@ -231,7 +231,7 @@
 
           <h2>Баланс: {balance} ₽</h2>
           <div className="cashout-area">
-            <input className="cashout-input" type="number" placeholder="Сумма вывода" value={cashOutAmount} onChange={e=>setCashOutAmount(e.target.value)} />
+            <input className="cashout-input" type="number" placeholder="Сумма" value={cashOutAmount} onChange={e=>setCashOutAmount(e.target.value)} />
             <button className="cashout-btn" onClick={cashOut}>💸 Вывести в кэш</button>
           </div>
 
@@ -257,3 +257,4 @@
   </script>
 </body>
 </html>
+
