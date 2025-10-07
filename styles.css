@@ -83,27 +83,37 @@ input:focus, select:focus {
 .history .entry {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start; /* 👈 вместо center */
   gap: 8px;
-  flex-wrap: wrap; /* 👈 позволяет переносить элементы на маленьком экране */
   padding: 8px 0;
   border-bottom: 1px solid #e0e0e0;
 }
 
 .history .entry > div:first-child {
   flex: 1 1 auto;
-  min-width: 160px; /* чтобы текст не сжимался слишком сильно */
+  min-width: 0;
 }
 
 .history .entry .row {
-  flex: 0 0 auto;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
+  flex-shrink: 0; /* правая часть не сжимается */
 }
 
 .history .entry .row div {
   white-space: nowrap;
+}
+
+/* --- мобильная адаптация --- */
+@media (max-width: 480px) {
+  .history .entry {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .history .entry .row {
+    width: 100%;
+    justify-content: flex-end;
+  }
 }
 .bonus { color: #1b5e20; font-weight: 700; }
 .negative { color: #b00020; }
