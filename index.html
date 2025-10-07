@@ -253,30 +253,57 @@
         reader.readAsText(file, 'UTF-8');
       };
 
-      React.useEffect(() => {
-        const burger = document.getElementById('burgerBtn');
-        const sidebar = document.getElementById('sidebar');
-        const close = document.getElementById('closeSidebar');
-        const exportBtn = document.getElementById('exportBtn');
-        const importFile = document.getElementById('importFile');
+  React.useEffect(() => {
+  const burger = document.getElementById('burgerBtn');
+  const sidebar = document.getElementById('sidebar');
+  const close = document.getElementById('closeSidebar');
+  const exportBtn = document.getElementById('exportBtn');
+  const importFile = document.getElementById('importFile');
 
-        const open = () => sidebar.classList.add('open');
-        const closeFn = () => sidebar.classList.remove('open');
-        const onExport = () => exportCSV();
-        const onImportChange = (e) => { if(e.target.files[0]) importCSV(e.target.files[0]); };
+  const open = () => sidebar.classList.add('open');
+  const closeFn = () => sidebar.classList.remove('open');
+  
+  // 👇 теперь экспорт использует актуальное состояние
+  const onExport = () => {
+    if (!history || history.length === 0) {
+      alert("История пока пуста — добавь хотя бы одну запись.");
+      return;
+    }
+    const header = ["Дата","Предмет","Оценка","Бонус","Сумма"];
+    const rows = history.map(h => [
+      h.date || "",
+      h.subject || "",
+      h.grade || "",
+      h.bonus || "",
+      h.reward !== undefined ? h.reward : ""
+    ]);
+    const csvContent = [header, ...rows]
+      .map(row => row.map(item => `"${String(item).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+    const blob = new Blob([csvContent], {type: "text/csv;charset=utf-8;"});
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `history_${new Date().toLocaleDateString("ru-RU")}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
-        burger.addEventListener('click', open);
-        close.addEventListener('click', closeFn);
-        exportBtn.addEventListener('click', onExport);
-        importFile.addEventListener('change', onImportChange);
+  const onImportChange = (e) => { if(e.target.files[0]) importCSV(e.target.files[0]); };
 
-        return () => {
-          burger.removeEventListener('click', open);
-          close.removeEventListener('click', closeFn);
-          exportBtn.removeEventListener('click', onExport);
-          importFile.removeEventListener('change', onImportChange);
-        };
-      }, []);
+  burger.addEventListener('click', open);
+  close.addEventListener('click', closeFn);
+  exportBtn.addEventListener('click', onExport);
+  importFile.addEventListener('change', onImportChange);
+
+  return () => {
+    burger.removeEventListener('click', open);
+    close.removeEventListener('click', closeFn);
+    exportBtn.removeEventListener('click', onExport);
+    importFile.removeEventListener('change', onImportChange);
+  };
+}, [history]); // 👈 добавили зависимость history!
 
       return (
         <div>
@@ -318,5 +345,6 @@
   </script>
 </body>
 </html>
+
 
 
