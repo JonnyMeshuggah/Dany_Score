@@ -184,7 +184,10 @@ React.useEffect(()=>{
 
   if(!burger || !sidebar || !close || !exportBtn || !importFile || !faqBtn) return;
 
-  const open = ()=>sidebar.classList.add('open');
+  const open = (e)=>{
+    e.stopPropagation();            // 🚀 предотвращаем закрытие
+    sidebar.classList.add('open');
+  };
   const closeFn = ()=>sidebar.classList.remove('open');
   const onExport = ()=>exportCSV();
   const onImportChange = e => { if(e.target.files[0]) importCSV(e.target.files[0]); };
