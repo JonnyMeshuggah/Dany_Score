@@ -206,7 +206,7 @@ function App(){
     <div className="stack container">
      {!user ? (
   <div className="card auth-card" style={{textAlign: 'center'}}>
-    <img src="logo.png" alt="Логотип" style={{width: '80px', marginBottom: '16px'}} />
+    <img src="logo.png" alt="Логотип" style={{width: '160px', marginBottom: '16px'}} />
     <h2>Вход / Регистрация</h2>
           <div className="auth-fields">
             <input placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} />
