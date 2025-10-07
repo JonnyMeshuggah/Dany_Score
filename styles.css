@@ -96,6 +96,7 @@ input:focus, select:focus {
 .cashout { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 
 /* ==== Sidebar ==== */
+
 .sidebar {
   position: fixed;
   top: 0;
@@ -110,8 +111,13 @@ input:focus, select:focus {
   z-index: 2000;
   overflow-y: auto;
   box-shadow: 2px 0 8px rgba(0,0,0,.3);
+
+  display: flex;              /* добавили флекс */
+  flex-direction: column;     /* элементы сверху вниз */
 }
 .sidebar.open { transform: translateX(0); }
+
+
 .sidebar h2 {
   margin: 0 0 16px;
   font-size: 18px;
@@ -185,7 +191,7 @@ input:focus, select:focus {
 
 
 .sidebar-footer {
-  margin-top: auto;
+  margin-top: auto; /* теперь будет прижимать к низу */
   padding-top: 16px;
   border-top: 1px solid rgba(255,255,255,0.2);
   text-align: center;
