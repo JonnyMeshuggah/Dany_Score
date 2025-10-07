@@ -83,6 +83,7 @@ input:focus, select:focus {
 .history .entry {
   display: flex;
   justify-content: space-between;
+  align-items: center;  /* <-- возвращаем выравнивание по центру на десктопе */
   gap: 8px;
   padding: 8px 0;
   border-bottom: 1px solid #e0e0e0;
@@ -97,7 +98,7 @@ input:focus, select:focus {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-shrink: 0; /* правая часть не сжимается */
+  flex-shrink: 0;
 }
 
 .history .entry .row div {
@@ -108,11 +109,11 @@ input:focus, select:focus {
 @media (max-width: 480px) {
   .history .entry {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: flex-start; /* текст слева */
   }
   .history .entry .row {
     width: 100%;
-    justify-content: flex-end;
+    justify-content: flex-end; /* сумма и корзина вправо */
   }
 }
 .bonus { color: #1b5e20; font-weight: 700; }
