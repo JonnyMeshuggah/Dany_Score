@@ -220,7 +220,7 @@
       const exportCSV = () => {
         if (!history || history.length === 0) { alert("История пуста"); return; }
         const header = ["Дата","Предмет","Оценка","Бонус","Сумма"];
-        const rows = history.map(h => [h.date || "", h.subject || "", h.grade || "", h.bonus || "", h.reward ?? ""]);
+       const rows = history.map(h => [h.date || "", h.subject || "", h.grade || "", h.bonus || "", (h.reward !== undefined ? h.reward : "")]);
         const csvContent = [header, ...rows]
           .map(row => row.map(item => `"${String(item).replace(/"/g, '""')}"`).join(","))
           .join("\n");
@@ -343,3 +343,4 @@
   </script>
 </body>
 </html>
+
