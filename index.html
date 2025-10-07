@@ -52,8 +52,6 @@
       background: transparent; color: inherit;
       border: 1px solid rgba(255,255,255,0.25);
       border-radius:8px; text-align:left;
-      box-sizing: border-box;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .file-input { display:none; }
 
@@ -88,7 +86,7 @@
       "Русский язык","Технология","Физика","Физкультура"
     ];
 
-    // Инициализация Firebase
+    // Firebase config (твои ключи)
     const firebaseConfig = {
       apiKey: "AIzaSyBCHpZRZddZwDrK0xVXXReGuEbJvkq9lQU",
       authDomain: "dany-school-gamification.firebaseapp.com",
@@ -109,23 +107,28 @@
       const [history, setHistory] = React.useState([]);
       const [cashOutAmount, setCashOutAmount] = React.useState("");
 
-      // --- Загрузка данных из Firestore ---
+      // Загрузка данных из Firebase
       React.useEffect(() => {
-        db.collection("users").doc("default_user").get().then(doc => {
-          if (doc.exists) {
-            const data = doc.data();
-            if (data.history) setHistory(data.history);
-            if (data.balance !== undefined) setBalance(data.balance);
-          }
-        });
+        db.collection("users").doc("default_user").get()
+          .then(doc => {
+            console.log("Firebase load:", doc.exists, doc.data());
+            if (doc.exists) {
+              const data = doc.data();
+              if (data.history) setHistory(data.history);
+              if (data.balance !== undefined) setBalance(data.balance);
+            }
+          })
+          .catch(err => console.error("Ошибка загрузки:", err));
       }, []);
 
-      // --- Сохранение данных в Firestore ---
+      // Сохранение данных в Firebase
       React.useEffect(() => {
         db.collection("users").doc("default_user").set({
           balance: balance,
           history: history
-        });
+        })
+        .then(()=>console.log("Firebase save ok", {balance,history}))
+        .catch(err=>console.error("Ошибка сохранения:",err));
       }, [balance, history]);
 
       const addGrade = () => {
@@ -258,7 +261,7 @@
 
           <h2>Баланс: {balance} ₽</h2>
           <div className="cashout-area">
-            <input className="cashout-input" type="number" placeholder="Сумма" value={cashOutAmount} onChange={e=>setCashOutAmount(e.target.value)} />
+            <input className="cashout-input" type="number" placeholder="Сумма вывода" value={cashOutAmount} onChange={e=>setCashOutAmount(e.target.value)} />
             <button className="cashout-btn" onClick={cashOut}>💸 Вывести в кэш</button>
           </div>
 
@@ -284,4 +287,3 @@
   </script>
 </body>
 </html>
-
