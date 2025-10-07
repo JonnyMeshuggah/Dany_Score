@@ -28,37 +28,21 @@
     .cashout-btn { padding:10px 20px; font-size:18px; background:#4caf50; color:white; border:none; border-radius:5px; }
     .cashout-input { width:120px; font-size:16px; padding:6px; }
 
-    /* Боковая панель */
     .sidebar {
-      position: fixed;
-      top: 0;
-      left: 0;
-      transform: translateX(-100%);
-      width: 280px;
-      height: 100%;
-      background: #333;
-      color: #fff;
-      padding: 16px;
-      box-sizing: border-box;
-      transition: transform 0.3s ease;
-      z-index: 1000;
-      overflow-y: auto;
+      position: fixed; top: 0; left: 0; transform: translateX(-100%);
+      width: 280px; height: 100%; background: #333; color: #fff;
+      padding: 16px; box-sizing: border-box; transition: transform 0.3s ease;
+      z-index: 1000; overflow-y: auto;
     }
     .sidebar.open { transform: translateX(0); }
     .sidebar h2 { color:#fff; font-size:18px; margin: 0 0 16px 0; }
 
     .panel-btn {
-      display:block; width:100%;
-      margin-bottom:10px; padding:10px 14px; font-size:16px;
-      background:none; color: #fff;
-      border:1px solid rgba(255,255,255,0.3);
+      display:block; width:100%; margin-bottom:10px; padding:10px 14px; font-size:16px;
+      background:none; color: #fff; border:1px solid rgba(255,255,255,0.3);
       border-radius:6px; text-align:left; box-sizing:border-box;
-      transition: background .2s, border-color .2s;
     }
-    .panel-btn:hover {
-      background: rgba(255,255,255,0.1);
-      border-color: rgba(255,255,255,0.5);
-    }
+    .panel-btn:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.5); }
     .file-input { display:none; }
 
     .burger {
@@ -78,7 +62,6 @@
   <button class="burger" id="burgerBtn">☰</button>
   <div id="root"></div>
 
-  <!-- Боковая панель -->
   <div id="sidebar" class="sidebar">
     <button class="close-btn" id="closeSidebar" title="Закрыть">✖</button>
     <h2>Администрирование</h2>
@@ -95,7 +78,6 @@
       "Русский язык","Технология","Физика","Физкультура"
     ];
 
-    // Firebase config — твои ключи
     const firebaseConfig = {
       apiKey: "AIzaSyBCHpZRZddZwDrK0xVXXReGuEbJvkq9lQU",
       authDomain: "dany-school-gamification.firebaseapp.com",
@@ -117,230 +99,168 @@
       const [cashOutAmount, setCashOutAmount] = React.useState("");
       const [loaded, setLoaded] = React.useState(false);
 
-      // Auth
       const [user, setUser] = React.useState(null);
       const [email, setEmail] = React.useState("");
       const [password, setPassword] = React.useState("");
 
       React.useEffect(() => {
-        return firebase.auth().onAuthStateChanged((u) => {
+        return firebase.auth().onAuthStateChanged(u => {
           setUser(u);
           if (!u) { setHistory([]); setBalance(0); setLoaded(false); }
         });
       }, []);
 
-      // Load user data (real-time)
       React.useEffect(() => {
         if (!user) return;
         const unsub = db.collection("users").doc(user.uid).onSnapshot(doc => {
           if (doc.exists) {
             const data = doc.data();
-            setHistory(Array.isArray(data.history) ? data.history : []);
-            setBalance(typeof data.balance === "number" ? data.balance : 0);
-          } else {
-            setHistory([]); setBalance(0);
-          }
+            setHistory(Array.isArray(data.history)?data.history:[]);
+            setBalance(typeof data.balance==="number"?data.balance:0);
+          } else { setHistory([]); setBalance(0);}
           setLoaded(true);
-        }, err => console.error("onSnapshot error:", err));
+        });
         return () => unsub();
       }, [user]);
 
-      // Save user data AFTER first load
       React.useEffect(() => {
         if (!loaded || !user) return;
         db.collection("users").doc(user.uid).set({ balance, history })
-          .catch(err=>console.error("Save error:",err));
+          .catch(err=>console.error(err));
       }, [balance, history, loaded, user]);
 
-      const register = async () => {
-        try {
-          await firebase.auth().createUserWithEmailAndPassword(email.trim(), password);
-        } catch (err) { alert(err.message); }
-      };
-      const login = async () => {
-        try {
-          await firebase.auth().signInWithEmailAndPassword(email.trim(), password);
-        } catch (err) { alert(err.message); }
-      };
+      const register = async () => { try { await firebase.auth().createUserWithEmailAndPassword(email,password);} catch(e){alert(e.message);} };
+      const login = async () => { try { await firebase.auth().signInWithEmailAndPassword(email,password);} catch(e){alert(e.message);} };
       const logout = async () => { await firebase.auth().signOut(); };
 
       const addGrade = () => {
-        if (!user) return alert("Сначала войдите в аккаунт");
         const date = new Date().toLocaleDateString("ru-RU");
-        let reward = baseRewards[grade] || 0;
-        let bonus = 1;
-        let bonusDesc = "";
-
-        // дневные бонусы
-        const todayGrades = history.filter(h => h.date === date);
-        const todayFives = todayGrades.filter(h => h.grade === 5).length;
-        if (grade === 5 && todayFives === 1) { bonus = 2; bonusDesc = "Удвоение за 2 пятёрки за день"; }
-        if (grade === 5 && todayFives === 2) { bonus = 3; bonusDesc = "Утроение за 3 пятёрки за день"; }
-
-        // серии по предмету
-        const sameSubject = history.filter(h => h.subject === selectedSubject);
-        const lastTwo = sameSubject.slice(-2);
-        const lastGrades = lastTwo.map(e => e.grade);
-        if (grade === 5) {
-          if (lastGrades.length >= 2 && lastGrades[0] === 5 && lastGrades[1] === 5) {
-            bonus = 3.5; bonusDesc = "Хет-трик 3 пятёрки подряд по предмету";
-          } else if (lastGrades.length >= 1 && lastGrades[0] === 5) {
-            bonus = 2.5; bonusDesc = "Бонус 2.5 за 2 пятёрки подряд по предмету";
-          }
+        let reward=baseRewards[grade]||0, bonus=1, bonusDesc="";
+        const todayGrades = history.filter(h=>h.date===date);
+        const todayFives = todayGrades.filter(h=>h.grade===5).length;
+        if (grade===5 && todayFives===1){bonus=2;bonusDesc="Удвоение за 2 пятёрки за день";}
+        if (grade===5 && todayFives===2){bonus=3;bonusDesc="Утроение за 3 пятёрки за день";}
+        const sameSubject=history.filter(h=>h.subject===selectedSubject);
+        const lastTwo=sameSubject.slice(-2), lastGrades=lastTwo.map(e=>e.grade);
+        if (grade===5){
+          if (lastGrades.length>=2&&lastGrades[0]===5&&lastGrades[1]===5){bonus=3.5;bonusDesc="Хет-трик 3 пятёрки подряд";}
+          else if (lastGrades.length>=1&&lastGrades[0]===5){bonus=2.5;bonusDesc="Бонус 2.5 за 2 пятёрки подряд";}
         }
-
-        const total = reward * bonus;
-        setBalance(balance + total);
-        const newEntry = {date, subject: selectedSubject, grade, reward: total, bonus: bonusDesc};
-        setHistory([newEntry, ...history]);
+        const total=reward*bonus;
+        setBalance(balance+total);
+        setHistory([{date,subject:selectedSubject,grade,reward:total,bonus:bonusDesc},...history]);
       };
 
-      const deleteEntry = (index) => {
-        const entry = history[index];
-        setBalance(balance - entry.reward);
-        const updated = [...history];
-        updated.splice(index, 1);
-        setHistory(updated);
+      const deleteEntry = i => {
+        const e=history[i];
+        setBalance(balance - e.reward);
+        const newH=[...history]; newH.splice(i,1);
+        setHistory(newH);
       };
 
       const cashOut = () => {
-        if (!user) return alert("Сначала войдите в аккаунт");
-        const amount = Number(cashOutAmount);
-        if (!amount || amount <= 0) return alert("Введите корректную сумму!");
-        if (amount > balance) return alert("Сумма больше доступного баланса!");
-        if (window.confirm(`Выдать ${amount} ₽ и уменьшить баланс?`)) {
-          const date = new Date().toLocaleDateString("ru-RU");
-          const newEntry = {date, subject:"💸 Вывод средств", grade:"—", reward: -amount, bonus:"Частичный вывод"};
-          setHistory([newEntry, ...history]);
-          setBalance(balance - amount);
-          setCashOutAmount("");
+        const amount=Number(cashOutAmount);
+        if(!amount||amount<=0) return alert("Введите корректную сумму");
+        if(amount>balance) return alert("Сумма больше баланса");
+        if(window.confirm(`Выдать ${amount} ₽ и уменьшить баланс?`)){
+          const date=new Date().toLocaleDateString("ru-RU");
+          setHistory([{date,subject:"💸 Вывод средств",grade:"—",reward:-amount,bonus:"Частичный вывод"},...history]);
+          setBalance(balance-amount); setCashOutAmount("");
         }
       };
 
-      const exportCSV = () => {
-        if (!history || history.length === 0) { alert("История пуста"); return; }
-        const header = ["Дата","Предмет","Оценка","Бонус","Сумма"];
-       const rows = history.map(h => [h.date || "", h.subject || "", h.grade || "", h.bonus || "", (h.reward !== undefined ? h.reward : "")]);
-        const csvContent = [header, ...rows]
-          .map(row => row.map(item => `"${String(item).replace(/"/g, '""')}"`).join(","))
-          .join("\n");
-        const blob = new Blob([csvContent], {type: "text/csv;charset=utf-8;"});
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `history_${new Date().toLocaleDateString("ru-RU")}.csv`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+      const exportCSV=()=>{
+        if(!history||history.length===0){alert("История пуста");return;}
+        const header=["Дата","Предмет","Оценка","Бонус","Сумма"];
+        const rows=history.map(h=>[h.date||"",h.subject||"",h.grade||"",h.bonus||"",h.reward||""]);
+        const csv=[header,...rows].map(r=>r.map(i=>`"${String(i).replace(/"/g,'""')}"`).join(",")).join("\n");
+        const blob=new Blob([csv],{type:"text/csv;charset=utf-8;"}),url=URL.createObjectURL(blob);
+        const a=document.createElement("a");a.href=url;a.download=`history_${new Date().toLocaleDateString("ru-RU")}.csv`;
+        document.body.appendChild(a);a.click();document.body.removeChild(a);
       };
 
-      const importCSV = (file) => {
-        if (!user) return alert("Сначала войдите в аккаунт");
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-          const text = evt.target.result;
-          const lines = text.trim().split(/\r?\n/);
-          if(lines.length < 2) return alert("Файл пустой или неверный формат");
-          const data = lines.slice(1).map(line => {
-            const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(x => x.replace(/^"|"$/g,'').replace(/""/g,'"'));
-            return { date: parts[0], subject: parts[1], grade: parts[2], bonus: parts[3], reward: Number(parts[4]) };
+      const importCSV=file=>{
+        const r=new FileReader();
+        r.onload=e=>{
+          const t=e.target.result, lines=t.trim().split(/\r?\n/);
+          if(lines.length<2)return alert("Файл пуст");
+          const data=lines.slice(1).map(l=>{
+            const p=l.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(x=>x.replace(/^"|"$/g,'').replace(/""/g,'"'));
+            return{date:p[0],subject:p[1],grade:p[2],bonus:p[3],reward:Number(p[4])};
           });
-          const total = data.reduce((sum, x) => sum + (Number.isFinite(x.reward) ? x.reward : 0), 0);
-          if(window.confirm("Загрузить историю из файла и заменить текущую?")) {
-            setHistory(data);
-            setBalance(total);
-          }
+          const total=data.reduce((s,x)=>s+(isFinite(x.reward)?x.reward:0),0);
+          if(window.confirm("Загрузить историю из файла и заменить текущую?")){setHistory(data);setBalance(total);}
         };
-        reader.readAsText(file, 'UTF-8');
+        r.readAsText(file,'UTF-8');
       };
 
-      // Sidebar handlers (depend on history to keep export fresh)
-      React.useEffect(() => {
-        const burger = document.getElementById('burgerBtn');
-        const sidebar = document.getElementById('sidebar');
-        const close = document.getElementById('closeSidebar');
-        const exportBtn = document.getElementById('exportBtn');
-        const importFile = document.getElementById('importFile');
-
-        const open = () => sidebar.classList.add('open');
-        const closeFn = () => sidebar.classList.remove('open');
-        const onExport = () => exportCSV();
-        const onImportChange = (e) => { if(e.target.files[0]) importCSV(e.target.files[0]); };
-
-        burger.addEventListener('click', open);
-        close.addEventListener('click', closeFn);
-        exportBtn.addEventListener('click', onExport);
-        importFile.addEventListener('change', onImportChange);
-
-        return () => {
-          burger.removeEventListener('click', open);
-          close.removeEventListener('click', closeFn);
-          exportBtn.removeEventListener('click', onExport);
-          importFile.removeEventListener('change', onImportChange);
-        };
-      }, [history, user]);
+      React.useEffect(()=>{
+        const b=document.getElementById('burgerBtn'),s=document.getElementById('sidebar'),
+              c=document.getElementById('closeSidebar'),ex=document.getElementById('exportBtn'),
+              imp=document.getElementById('importFile');
+        const open=()=>s.classList.add('open'),closeFn=()=>s.classList.remove('open'),
+              onEx=()=>exportCSV(),onImp=e=>{if(e.target.files[0])importCSV(e.target.files[0]);};
+        b.addEventListener('click',open);c.addEventListener('click',closeFn);
+        ex.addEventListener('click',onEx);imp.addEventListener('change',onImp);
+        return()=>{b.removeEventListener('click',open);c.removeEventListener('click',closeFn);
+          ex.removeEventListener('click',onEx);imp.removeEventListener('change',onImp);};
+      },[history]);
 
       return (
-        <div>
-          <h1>Учебная геймификация</h1>
-
-          {!user ? (
-            <>
-              <div className="auth">
-                <input placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} />
-                <input placeholder="Пароль" type="password" value={password} onChange={e=>setPassword(e.target.value)} />
-                <button onClick={login}>Войти</button>
-                <button onClick={register}>Регистрация</button>
-              </div>
-              <div className="muted">Войдите или зарегистрируйтесь, чтобы вести личную историю.</div>
-            </>
-          ) : (
-            <div className="auth">
-              <span>Вы вошли как <b>{user.email}</b></span>
-              <button onClick={logout}>Выйти</button>
-            </div>
-          )}
-
-          {user && (
-            <>
-              <form onSubmit={e => {e.preventDefault(); addGrade();}}>
-                <select value={selectedSubject} onChange={e => setSelectedSubject(e.target.value)}>
-                  {subjects.map(s => <option key={s}>{s}</option>)}
-                </select>
-                <select value={grade} onChange={e => setGrade(Number(e.target.value))}>
-                  {[5,4,3,2].map(g => <option key={g} value={g}>{g}</option>)}
-                </select>
-                <button type="submit">Добавить</button>
-              </form>
-
-              <h2>Баланс: {balance} ₽</h2>
-              <div className="cashout-area">
-                <input className="cashout-input" type="number" placeholder="Сумма вывода" value={cashOutAmount} onChange={e=>setCashOutAmount(e.target.value)} />
-                <button className="cashout-btn" onClick={cashOut}>💸 Вывести в кэш</button>
-              </div>
-
-              <div className="history">
-                <h3>История</h3>
-                {history.length === 0 && <p>Пока нет оценок.</p>}
-                {history.map((h, i) => (
-                  <div key={i} className="entry">
-                    <div>
-                      {h.date} — {h.subject}: <strong className={h.reward>=0?"":"negative"}>{h.grade}</strong>
-                      {h.bonus && <span className="bonus"> + {h.bonus}</span>}
-                      → {h.reward>=0?`+${h.reward}`:`${h.reward}`}₽
-                    </div>
-                    <button className="delete-btn" onClick={() => deleteEntry(i)} title="Удалить">🗑️</button>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
+        React.createElement("div",null,
+          React.createElement("h1",null,"Учебная геймификация"),
+          !user ?
+            React.createElement(React.Fragment,null,
+              React.createElement("div",{className:"auth"},
+                React.createElement("input",{placeholder:"Email",value:email,onChange:e=>setEmail(e.target.value)}),
+                React.createElement("input",{placeholder:"Пароль",type:"password",value:password,onChange:e=>setPassword(e.target.value)}),
+                React.createElement("button",{onClick:login},"Войти"),
+                React.createElement("button",{onClick:register},"Регистрация")
+              ),
+              React.createElement("div",{className:"muted"},"Войдите или зарегистрируйтесь, чтобы вести личную историю.")
+            )
+          :
+            React.createElement("div",{className:"auth"},
+              React.createElement("span",null,"Вы вошли как ",React.createElement("b",null,user.email)),
+              React.createElement("button",{onClick:logout},"Выйти")
+            ),
+          user &&
+            React.createElement(React.Fragment,null,
+              React.createElement("form",{onSubmit:e=>{e.preventDefault();addGrade();}},
+                React.createElement("select",{value:selectedSubject,onChange:e=>setSelectedSubject(e.target.value)},
+                  subjects.map(s=>React.createElement("option",{key:s},s))
+                ),
+                React.createElement("select",{value:grade,onChange:e=>setGrade(Number(e.target.value))},
+                  [5,4,3,2].map(g=>React.createElement("option",{key:g,value:g},g))
+                ),
+                React.createElement("button",{type:"submit"},"Добавить")
+              ),
+              React.createElement("h2",null,"Баланс: ",balance," ₽"),
+              React.createElement("div",{className:"cashout-area"},
+                React.createElement("input",{className:"cashout-input",type:"number",placeholder:"Сумма вывода",value:cashOutAmount,onChange:e=>setCashOutAmount(e.target.value)}),
+                React.createElement("button",{className:"cashout-btn",onClick:cashOut},"💸 Вывести в кэш")
+              ),
+              React.createElement("div",{className:"history"},
+                React.createElement("h3",null,"История"),
+                history.length===0 && React.createElement("p",null,"Пока нет оценок."),
+                history.map((h,i)=>
+                  React.createElement("div",{key:i,className:"entry"},
+                    React.createElement("div",null,
+                      h.date," — ",h.subject,": ",
+                      React.createElement("strong",{className:h.reward>=0?"":"negative"},h.grade),
+                      h.bonus && React.createElement("span",{className:"bonus"}," + ",h.bonus),
+                      " → ",h.reward>=0?`+${h.reward}`:`${h.reward}`,"₽"
+                    ),
+                    React.createElement("button",{className:"delete-btn",onClick:()=>deleteEntry(i),title:"Удалить"},"🗑️")
+                  )
+                )
+              )
+            )
+        )
       );
     }
 
-    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
   </script>
 </body>
 </html>
-
