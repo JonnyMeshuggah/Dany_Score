@@ -174,32 +174,44 @@ function App(){
   };
 
   // ---- Sidebar listeners (панель, экспорт/импорт)
-  React.useEffect(()=>{
-    const burger = document.getElementById('burgerBtn');
-    const sidebar = document.getElementById('sidebar');
-    const close = document.getElementById('closeSidebar');
-    const exportBtn = document.getElementById('exportBtn');
-    const importFile = document.getElementById('importFile');
+React.useEffect(()=>{
+  const burger = document.getElementById('burgerBtn');
+  const sidebar = document.getElementById('sidebar');
+  const close = document.getElementById('closeSidebar');
+  const exportBtn = document.getElementById('exportBtn');
+  const importFile = document.getElementById('importFile');
+  const faqBtn = document.getElementById('faqBtn');
 
-    if(!burger || !sidebar || !close || !exportBtn || !importFile) return;
+  if(!burger || !sidebar || !close || !exportBtn || !importFile || !faqBtn) return;
 
-    const open = ()=>sidebar.classList.add('open');
-    const closeFn = ()=>sidebar.classList.remove('open');
-    const onExport = ()=>exportCSV();
-    const onImportChange = (e)=>{ if(e.target.files[0]) importCSV(e.target.files[0]); };
+  const open = ()=>sidebar.classList.add('open');
+  const closeFn = ()=>sidebar.classList.remove('open');
+  const onExport = ()=>exportCSV();
+  const onImportChange = e => { if(e.target.files[0]) importCSV(e.target.files[0]); };
+  const onFaq = ()=>{ setShowFAQ(true); sidebar.classList.remove('open'); };
 
-    burger.addEventListener('click', open);
-    close.addEventListener('click', closeFn);
-    exportBtn.addEventListener('click', onExport);
-    importFile.addEventListener('change', onImportChange);
+  const clickOutside = (e)=>{
+    if(sidebar.classList.contains('open') && !sidebar.contains(e.target) && e.target !== burger){
+      sidebar.classList.remove('open');
+    }
+  };
 
-    return ()=>{
-      burger.removeEventListener('click', open);
-      close.removeEventListener('click', closeFn);
-      exportBtn.removeEventListener('click', onExport);
-      importFile.removeEventListener('change', onImportChange);
-    };
-  },[history, user]); // зависимость нужна, чтобы экспорт видел актуальные данные
+  burger.addEventListener('click', open);
+  close.addEventListener('click', closeFn);
+  exportBtn.addEventListener('click', onExport);
+  importFile.addEventListener('change', onImportChange);
+  faqBtn.addEventListener('click', onFaq);
+  document.addEventListener('click', clickOutside);
+
+  return ()=>{
+    burger.removeEventListener('click', open);
+    close.removeEventListener('click', closeFn);
+    exportBtn.removeEventListener('click', onExport);
+    importFile.removeEventListener('change', onImportChange);
+    faqBtn.removeEventListener('click', onFaq);
+    document.removeEventListener('click', clickOutside);
+  };
+},[history, user]);
 
   // ---- UI
   return (
