@@ -162,7 +162,7 @@ input:focus, select:focus {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2100;
+  z-index: 1100;
   cursor: pointer;
 }
 .burger:hover { background: rgba(0,0,0,0.06); }
