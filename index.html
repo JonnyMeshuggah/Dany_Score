@@ -86,7 +86,7 @@
       "Русский язык","Технология","Физика","Физкультура"
     ];
 
-    // Firebase config (твои ключи)
+    // Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyBCHpZRZddZwDrK0xVXXReGuEbJvkq9lQU",
       authDomain: "dany-school-gamification.firebaseapp.com",
@@ -106,29 +106,32 @@
       const [balance, setBalance] = React.useState(0);
       const [history, setHistory] = React.useState([]);
       const [cashOutAmount, setCashOutAmount] = React.useState("");
+      const [loaded, setLoaded] = React.useState(false);
 
-      // Подписка на обновления Firestore в реальном времени
+      // Подписка на Firestore (реальное время)
       React.useEffect(() => {
         const unsub = db.collection("users").doc("default_user").onSnapshot(doc => {
-          console.log("Real-time update:", doc.exists, doc.data());
+          console.log("🔥 SNAPSHOT", doc.exists, doc.data());
           if (doc.exists) {
             const data = doc.data();
             if (data.history) setHistory(data.history);
             if (data.balance !== undefined) setBalance(data.balance);
           }
+          setLoaded(true); // данные пришли
         }, err => console.error("Ошибка подписки:", err));
-        return () => unsub(); // отписка при размонтировании
+        return () => unsub();
       }, []);
 
-      // Сохранение данных в Firestore при каждом изменении
+      // Сохраняем в Firestore только после первой загрузки
       React.useEffect(() => {
+        if (!loaded) return;
         db.collection("users").doc("default_user").set({
-          balance: balance,
-          history: history
+          balance,
+          history
         })
         .then(()=>console.log("Firebase save ok", {balance,history}))
         .catch(err=>console.error("Ошибка сохранения:",err));
-      }, [balance, history]);
+      }, [balance, history, loaded]);
 
       const addGrade = () => {
         const date = new Date().toLocaleDateString("ru-RU");
