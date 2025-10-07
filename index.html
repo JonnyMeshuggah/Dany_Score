@@ -23,7 +23,30 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
 </head>
 <body>
+  <!-- Контейнер React -->
   <div id="root"></div>
+
+  <!-- Боковая панель -->
+  <div id="sidebar" class="sidebar">
+    <button class="close-btn icon-btn" id="closeSidebar" title="Закрыть">
+      <span class="material-icons" style="color:#fff;">close</span>
+    </button>
+    <h2>Администрирование</h2>
+    <button class="panel-btn" id="exportBtn">
+      <span class="material-icons" style="vertical-align:middle;margin-right:6px;">download</span>
+      Экспорт CSV
+    </button>
+    <label class="panel-btn" for="importFile">
+      <span class="material-icons" style="vertical-align:middle;margin-right:6px;">upload</span>
+      Импорт CSV
+    </label>
+    <input type="file" accept=".csv" id="importFile" class="file-input">
+  </div>
+
+  <!-- Кнопка открытия панели -->
+  <button class="burger icon-btn" id="burgerBtn" title="Админ-панель">
+    <span class="material-icons">menu</span>
+  </button>
 
   <!-- Основное приложение -->
   <script type="text/babel" src="app.js"></script>
