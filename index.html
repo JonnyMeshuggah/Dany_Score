@@ -198,22 +198,35 @@
         }
       };
 
-      const exportCSV = () => {
-        if(history.length === 0) return alert("История пуста");
-        const header = ["Дата","Предмет","Оценка","Бонус","Сумма"];
-        const rows = history.map(h => [h.date, h.subject, h.grade, h.bonus || "", h.reward]);
-        const csvContent = [header, ...rows]
-          .map(row => row.map(item => `"${String(item).replace(/"/g, '""')}"`).join(","))
-          .join("\n");
-        const blob = new Blob([csvContent], {type: 'text/csv;charset=utf-8;'});
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `history_${new Date().toLocaleDateString("ru-RU")}.csv`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      };
+     const exportCSV = () => {
+  // Проверяем, есть ли данные в истории
+  if (!history || history.length === 0) {
+    alert("История пока пуста — добавь хотя бы одну запись.");
+    return;
+  }
+
+  const header = ["Дата","Предмет","Оценка","Бонус","Сумма"];
+  const rows = history.map(h => [
+    h.date || "",
+    h.subject || "",
+    h.grade || "",
+    h.bonus || "",
+    h.reward !== undefined ? h.reward : ""
+  ]);
+
+  const csvContent = [header, ...rows]
+    .map(row => row.map(item => `"${String(item).replace(/"/g, '""')}"`).join(","))
+    .join("\n");
+
+  const blob = new Blob([csvContent], {type: "text/csv;charset=utf-8;"});
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `history_${new Date().toLocaleDateString("ru-RU")}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
 
       const importCSV = (file) => {
         const reader = new FileReader();
@@ -305,4 +318,5 @@
   </script>
 </body>
 </html>
+
 
