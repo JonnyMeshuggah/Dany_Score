@@ -21,7 +21,6 @@ button {
   border-radius: 6px;
   padding: 10px 16px;
   font-weight: 500;
-  text-transform: uppercase;
   background-color: var(--md-primary);
   color: #fff;
   box-shadow: 0 2px 5px rgba(0,0,0,0.2);
