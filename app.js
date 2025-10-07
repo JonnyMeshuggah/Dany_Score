@@ -283,6 +283,11 @@ function App(){
           </div>
         </React.Fragment>
       )}
+        {user && (
+        <button className="burger" id="burgerBtn" title="Админ-панель">
+          <span className="material-icons">menu</span>
+        </button>
+      )}
     </div>
   );
 }
