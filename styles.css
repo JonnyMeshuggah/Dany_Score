@@ -136,6 +136,8 @@ input:focus, select:focus {
   text-align: left;
   box-sizing: border-box;
   transition: background .2s, border-color .2s;
+  text-decoration: none;
+  
 }
 .panel-btn:hover {
   background: rgba(255,255,255,0.08);
