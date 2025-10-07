@@ -53,12 +53,12 @@
       background:none; color: #fff;
       border:1px solid rgba(255,255,255,0.3);
       border-radius:6px; text-align:left; box-sizing:border-box;
+      transition: background .2s, border-color .2s;
     }
     .panel-btn:hover {
       background: rgba(255,255,255,0.1);
       border-color: rgba(255,255,255,0.5);
     }
-
     .file-input { display:none; }
 
     .burger {
@@ -69,6 +69,9 @@
       position:absolute; top:10px; right:10px;
       background:none; border:none; color:white; font-size:24px; cursor:pointer;
     }
+
+    .auth { display:flex; gap:8px; align-items:center; margin-bottom:16px; flex-wrap:wrap; }
+    .muted { color:#666; font-size:14px; margin-top:-8px; margin-bottom:12px; }
   </style>
 </head>
 <body>
@@ -92,7 +95,7 @@
       "Русский язык","Технология","Физика","Физкультура"
     ];
 
-    // Firebase config
+    // Firebase config — твои ключи
     const firebaseConfig = {
       apiKey: "AIzaSyBCHpZRZddZwDrK0xVXXReGuEbJvkq9lQU",
       authDomain: "dany-school-gamification.firebaseapp.com",
@@ -113,65 +116,68 @@
       const [history, setHistory] = React.useState([]);
       const [cashOutAmount, setCashOutAmount] = React.useState("");
       const [loaded, setLoaded] = React.useState(false);
+
+      // Auth
       const [user, setUser] = React.useState(null);
       const [email, setEmail] = React.useState("");
       const [password, setPassword] = React.useState("");
 
-      // auth listener
       React.useEffect(() => {
         return firebase.auth().onAuthStateChanged((u) => {
           setUser(u);
-          if (!u) {
-            setHistory([]);
-            setBalance(0);
-          }
+          if (!u) { setHistory([]); setBalance(0); setLoaded(false); }
         });
       }, []);
 
-      // load user data
+      // Load user data (real-time)
       React.useEffect(() => {
         if (!user) return;
         const unsub = db.collection("users").doc(user.uid).onSnapshot(doc => {
           if (doc.exists) {
             const data = doc.data();
-            setHistory(data.history || []);
-            setBalance(data.balance || 0);
+            setHistory(Array.isArray(data.history) ? data.history : []);
+            setBalance(typeof data.balance === "number" ? data.balance : 0);
           } else {
-            setHistory([]);
-            setBalance(0);
+            setHistory([]); setBalance(0);
           }
           setLoaded(true);
-        });
+        }, err => console.error("onSnapshot error:", err));
         return () => unsub();
       }, [user]);
 
-      // save user data
+      // Save user data AFTER first load
       React.useEffect(() => {
         if (!loaded || !user) return;
-        db.collection("users").doc(user.uid).set({ balance, history });
+        db.collection("users").doc(user.uid).set({ balance, history })
+          .catch(err=>console.error("Save error:",err));
       }, [balance, history, loaded, user]);
 
       const register = async () => {
-        try { await firebase.auth().createUserWithEmailAndPassword(email, password); }
-        catch (err) { alert(err.message); }
+        try {
+          await firebase.auth().createUserWithEmailAndPassword(email.trim(), password);
+        } catch (err) { alert(err.message); }
       };
       const login = async () => {
-        try { await firebase.auth().signInWithEmailAndPassword(email, password); }
-        catch (err) { alert(err.message); }
+        try {
+          await firebase.auth().signInWithEmailAndPassword(email.trim(), password);
+        } catch (err) { alert(err.message); }
       };
       const logout = async () => { await firebase.auth().signOut(); };
 
       const addGrade = () => {
+        if (!user) return alert("Сначала войдите в аккаунт");
         const date = new Date().toLocaleDateString("ru-RU");
         let reward = baseRewards[grade] || 0;
         let bonus = 1;
         let bonusDesc = "";
 
+        // дневные бонусы
         const todayGrades = history.filter(h => h.date === date);
         const todayFives = todayGrades.filter(h => h.grade === 5).length;
         if (grade === 5 && todayFives === 1) { bonus = 2; bonusDesc = "Удвоение за 2 пятёрки за день"; }
         if (grade === 5 && todayFives === 2) { bonus = 3; bonusDesc = "Утроение за 3 пятёрки за день"; }
 
+        // серии по предмету
         const sameSubject = history.filter(h => h.subject === selectedSubject);
         const lastTwo = sameSubject.slice(-2);
         const lastGrades = lastTwo.map(e => e.grade);
@@ -198,6 +204,7 @@
       };
 
       const cashOut = () => {
+        if (!user) return alert("Сначала войдите в аккаунт");
         const amount = Number(cashOutAmount);
         if (!amount || amount <= 0) return alert("Введите корректную сумму!");
         if (amount > balance) return alert("Сумма больше доступного баланса!");
@@ -228,6 +235,7 @@
       };
 
       const importCSV = (file) => {
+        if (!user) return alert("Сначала войдите в аккаунт");
         const reader = new FileReader();
         reader.onload = (evt) => {
           const text = evt.target.result;
@@ -237,7 +245,7 @@
             const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(x => x.replace(/^"|"$/g,'').replace(/""/g,'"'));
             return { date: parts[0], subject: parts[1], grade: parts[2], bonus: parts[3], reward: Number(parts[4]) };
           });
-          const total = data.reduce((sum, x) => sum + x.reward, 0);
+          const total = data.reduce((sum, x) => sum + (Number.isFinite(x.reward) ? x.reward : 0), 0);
           if(window.confirm("Загрузить историю из файла и заменить текущую?")) {
             setHistory(data);
             setBalance(total);
@@ -246,6 +254,7 @@
         reader.readAsText(file, 'UTF-8');
       };
 
+      // Sidebar handlers (depend on history to keep export fresh)
       React.useEffect(() => {
         const burger = document.getElementById('burgerBtn');
         const sidebar = document.getElementById('sidebar');
@@ -269,20 +278,25 @@
           exportBtn.removeEventListener('click', onExport);
           importFile.removeEventListener('change', onImportChange);
         };
-      }, [history]);
+      }, [history, user]);
 
       return (
         <div>
+          <h1>Учебная геймификация</h1>
+
           {!user ? (
-            <div style={{marginBottom:"20px"}}>
-              <input placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} />
-              <input placeholder="Пароль" type="password" value={password} onChange={e=>setPassword(e.target.value)} />
-              <button onClick={login}>Войти</button>
-              <button onClick={register}>Регистрация</button>
-            </div>
+            <>
+              <div className="auth">
+                <input placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} />
+                <input placeholder="Пароль" type="password" value={password} onChange={e=>setPassword(e.target.value)} />
+                <button onClick={login}>Войти</button>
+                <button onClick={register}>Регистрация</button>
+              </div>
+              <div className="muted">Войдите или зарегистрируйтесь, чтобы вести личную историю.</div>
+            </>
           ) : (
-            <div style={{marginBottom:"20px"}}>
-              <p>Вы вошли как {user.email}</p>
+            <div className="auth">
+              <span>Вы вошли как <b>{user.email}</b></span>
               <button onClick={logout}>Выйти</button>
             </div>
           )}
