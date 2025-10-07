@@ -178,44 +178,42 @@ React.useEffect(()=>{
   const burger = document.getElementById('burgerBtn');
   const sidebar = document.getElementById('sidebar');
   const close = document.getElementById('closeSidebar');
+  const overlay = document.getElementById('sidebarOverlay');
   const exportBtn = document.getElementById('exportBtn');
   const importFile = document.getElementById('importFile');
   const faqBtn = document.getElementById('faqBtn');
 
-  if(!burger || !sidebar || !close || !exportBtn || !importFile || !faqBtn) return;
+  if(!burger || !sidebar || !close || !overlay || !exportBtn || !importFile || !faqBtn) return;
 
-  const open = (e)=>{
-    e.stopPropagation();            // 🚀 предотвращаем закрытие
+  const open = ()=>{
     sidebar.classList.add('open');
+    overlay.classList.add('active');
   };
-  const closeFn = ()=>sidebar.classList.remove('open');
+  const closeFn = ()=>{
+    sidebar.classList.remove('open');
+    overlay.classList.remove('active');
+  };
   const onExport = ()=>exportCSV();
   const onImportChange = e => { if(e.target.files[0]) importCSV(e.target.files[0]); };
-  const onFaq = ()=>{ setShowFAQ(true); sidebar.classList.remove('open'); };
-
-  const clickOutside = (e)=>{
-    if(sidebar.classList.contains('open') && !sidebar.contains(e.target) && e.target !== burger){
-      sidebar.classList.remove('open');
-    }
-  };
+  const onFaq = ()=>{ setShowFAQ(true); closeFn(); };
 
   burger.addEventListener('click', open);
   close.addEventListener('click', closeFn);
+  overlay.addEventListener('click', closeFn);
   exportBtn.addEventListener('click', onExport);
   importFile.addEventListener('change', onImportChange);
   faqBtn.addEventListener('click', onFaq);
-  document.addEventListener('click', clickOutside);
 
   return ()=>{
     burger.removeEventListener('click', open);
     close.removeEventListener('click', closeFn);
+    overlay.removeEventListener('click', closeFn);
     exportBtn.removeEventListener('click', onExport);
     importFile.removeEventListener('change', onImportChange);
     faqBtn.removeEventListener('click', onFaq);
-    document.removeEventListener('click', clickOutside);
   };
 },[history, user]);
-
+  
   // ---- UI
   return (
     <div className="stack container">
