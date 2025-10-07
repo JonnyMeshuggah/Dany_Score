@@ -204,9 +204,10 @@ function App(){
   // ---- UI
   return (
     <div className="stack container">
-      {!user ? (
-        <div className="card auth-card">
-          <h2>Вход / Регистрация</h2>
+     {!user ? (
+  <div className="card auth-card" style={{textAlign: 'center'}}>
+    <img src="logo.png" alt="Логотип" style={{width: '80px', marginBottom: '16px'}} />
+    <h2>Вход / Регистрация</h2>
           <div className="auth-fields">
             <input placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} />
             <input placeholder="Пароль" type="password" value={password} onChange={e=>setPassword(e.target.value)} />
