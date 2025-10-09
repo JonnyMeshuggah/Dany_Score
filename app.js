@@ -8,9 +8,28 @@ const SUBJECTS = [
 
 // ==== Firebase ====
 
+// ==== Firebase ====
+// собираем конфиг из window.env, который задался в env.js
+var firebaseConfig = window && window.env ? {
+  apiKey: window.env.FIREBASE_API_KEY,
+  authDomain: window.env.FIREBASE_AUTH_DOMAIN,
+  projectId: window.env.FIREBASE_PROJECT_ID,
+  storageBucket: window.env.FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: window.env.FIREBASE_MESSAGING_SENDER_ID,
+  appId: window.env.FIREBASE_APP_ID,
+  measurementId: window.env.FIREBASE_MEASUREMENT_ID
+} : null;
 
+// быстрые подсказки, если переменные не подставились
+if (!firebaseConfig || !firebaseConfig.apiKey || String(firebaseConfig.apiKey).indexOf('${') !== -1) {
+  console.error('Firebase env переменные не подставились. Проверь env.js и переменные в Vercel.');
+  alert('Проблема с ключами Firebase. Проверь env.js и Environment Variables в Vercel.');
+}
+
+// Инициализация
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+
 
 function App(){
   const [subjects] = React.useState(SUBJECTS);
