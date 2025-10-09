@@ -10,16 +10,23 @@ const SUBJECTS = [
 
 // ==== Firebase ====
 // ==== ИНИЦИАЛИЗАЦИЯ FIREBASE И ЗАПУСК ПРИЛОЖЕНИЯ ====
+// ==== ИНИЦИАЛИЗАЦИЯ FIREBASE И ЗАПУСК РЕАКТА ====
+function showLoadingScreen(message = "🚀 Загрузка приложения...") {
+  const root = document.getElementById("root");
+  root.innerHTML = `<div style="font-family:sans-serif;text-align:center;margin-top:100px;color:#666;">${message}</div>`;
+}
+
 async function initFirebaseAndStartApp() {
-  // ждем пока загрузятся переменные из /api/env
-  for (let i = 0; i < 25; i++) { // максимум ~5 секунд ожидания
+  showLoadingScreen("⏳ Загружаем конфигурацию Firebase...");
+
+  // ждём переменные окружения
+  for (let i = 0; i < 25; i++) {
     if (window.env && window.env.FIREBASE_API_KEY) break;
-    console.log("⏳ Ожидание переменных окружения...");
     await new Promise(r => setTimeout(r, 200));
   }
 
   if (!window.env || !window.env.FIREBASE_API_KEY) {
-    alert("Ошибка: не удалось загрузить переменные Firebase.");
+    showLoadingScreen("❌ Ошибка: переменные Firebase не загружены.");
     throw new Error("Firebase env not loaded");
   }
 
@@ -33,29 +40,31 @@ async function initFirebaseAndStartApp() {
     measurementId: window.env.FIREBASE_MEASUREMENT_ID
   };
 
-  // инициализируем firebase только один раз
+  // инициализация только один раз
   if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
     console.log("✅ Firebase инициализирован успешно");
   } else {
-    console.log("⚠️ Firebase уже инициализирован, пропускаем повторную инициализацию");
+    console.log("⚠️ Firebase уже инициализирован");
   }
 
   window.db = firebase.firestore();
 
-  // запускаем React только один раз
+  // ждём немного, чтобы Firebase успел завершить инициализацию
+  await new Promise(r => setTimeout(r, 200));
+
+  // запускаем React
   if (!window.__react_root__) {
     window.__react_root__ = ReactDOM.createRoot(document.getElementById("root"));
     window.__react_root__.render(<App />);
   }
 }
 
-// защита от повторных запусков
 if (!window.__app_started__) {
   window.__app_started__ = true;
+  showLoadingScreen();
   initFirebaseAndStartApp();
 }
-
 function App(){
   const [subjects] = React.useState(SUBJECTS);
   const [selectedSubject, setSelectedSubject] = React.useState(subjects[0]);
