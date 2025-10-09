@@ -9,18 +9,16 @@ const SUBJECTS = [
 
 
 // ==== Firebase ====
-let firebaseConfig = null;
 let db = null;
 
-// Функция инициализации Firebase, вызывается после загрузки env
 function initFirebase() {
   if (!window.env || !window.env.FIREBASE_API_KEY) {
-    console.error("ENV ещё не загружен. Повторяем через 200мс...");
+    console.warn("⏳ Ожидание переменных окружения...");
     setTimeout(initFirebase, 200);
     return;
   }
 
-  firebaseConfig = {
+  const firebaseConfig = {
     apiKey: window.env.FIREBASE_API_KEY,
     authDomain: window.env.FIREBASE_AUTH_DOMAIN,
     projectId: window.env.FIREBASE_PROJECT_ID,
@@ -33,14 +31,16 @@ function initFirebase() {
   try {
     firebase.initializeApp(firebaseConfig);
     db = firebase.firestore();
-    console.log("✅ Firebase initialized OK");
+    console.log("✅ Firebase инициализирован успешно");
   } catch (e) {
-    console.error("Ошибка инициализации Firebase:", e);
+    if (!/already exists/.test(e.message)) {
+      console.error("Ошибка инициализации Firebase:", e);
+    }
   }
 }
 
-// Стартуем инициализацию с небольшой задержкой, чтобы дождаться env
-setTimeout(initFirebase, 200);
+// запускаем инициализацию (ждёт пока env появится)
+initFirebase();
 
 function App(){
   const [subjects] = React.useState(SUBJECTS);
