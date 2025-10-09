@@ -9,23 +9,38 @@ const SUBJECTS = [
 
 
 // ==== Firebase ====
-var firebaseConfig = (window && window.env) ? {
-  apiKey: window.env.FIREBASE_API_KEY,
-  authDomain: window.env.FIREBASE_AUTH_DOMAIN,
-  projectId: window.env.FIREBASE_PROJECT_ID,
-  storageBucket: window.env.FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: window.env.FIREBASE_MESSAGING_SENDER_ID,
-  appId: window.env.FIREBASE_APP_ID,
-  measurementId: window.env.FIREBASE_MEASUREMENT_ID
-} : null;
+let firebaseConfig = null;
+let db = null;
 
-if (!firebaseConfig || !firebaseConfig.apiKey) {
-  console.error('Firebase env не загружен. Проверь /api/env и переменные в Vercel.');
-  alert('Проблема с ключами Firebase. Проверь /api/env и Environment Variables в Vercel.');
-} else {
-  firebase.initializeApp(firebaseConfig);
+// Функция инициализации Firebase, вызывается после загрузки env
+function initFirebase() {
+  if (!window.env || !window.env.FIREBASE_API_KEY) {
+    console.error("ENV ещё не загружен. Повторяем через 200мс...");
+    setTimeout(initFirebase, 200);
+    return;
+  }
+
+  firebaseConfig = {
+    apiKey: window.env.FIREBASE_API_KEY,
+    authDomain: window.env.FIREBASE_AUTH_DOMAIN,
+    projectId: window.env.FIREBASE_PROJECT_ID,
+    storageBucket: window.env.FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: window.env.FIREBASE_MESSAGING_SENDER_ID,
+    appId: window.env.FIREBASE_APP_ID,
+    measurementId: window.env.FIREBASE_MEASUREMENT_ID
+  };
+
+  try {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    console.log("✅ Firebase initialized OK");
+  } catch (e) {
+    console.error("Ошибка инициализации Firebase:", e);
+  }
 }
-const db = firebase.firestore();
+
+// Стартуем инициализацию с небольшой задержкой, чтобы дождаться env
+setTimeout(initFirebase, 200);
 
 function App(){
   const [subjects] = React.useState(SUBJECTS);
