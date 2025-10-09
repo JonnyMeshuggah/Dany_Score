@@ -9,10 +9,10 @@ const SUBJECTS = [
 
 
 // ==== Firebase ====
-// ==== ИНИЦИАЛИЗАЦИЯ FIREBASE ====
+// ==== ИНИЦИАЛИЗАЦИЯ FIREBASE И ЗАПУСК ПРИЛОЖЕНИЯ ====
 async function initFirebaseAndStartApp() {
-  // ждём пока загрузится window.env (из /api/env)
-  for (let i = 0; i < 25; i++) { // максимум 5 секунд ожидания
+  // ждем пока загрузятся переменные из /api/env
+  for (let i = 0; i < 25; i++) { // максимум ~5 секунд ожидания
     if (window.env && window.env.FIREBASE_API_KEY) break;
     console.log("⏳ Ожидание переменных окружения...");
     await new Promise(r => setTimeout(r, 200));
@@ -33,20 +33,27 @@ async function initFirebaseAndStartApp() {
     measurementId: window.env.FIREBASE_MEASUREMENT_ID
   };
 
-  firebase.initializeApp(firebaseConfig);
+  // инициализируем firebase только один раз
+  if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+    console.log("✅ Firebase инициализирован успешно");
+  } else {
+    console.log("⚠️ Firebase уже инициализирован, пропускаем повторную инициализацию");
+  }
+
   window.db = firebase.firestore();
 
-  console.log("✅ Firebase инициализирован успешно");
-
-  // теперь запускаем React
-  startReactApp();
+  // запускаем React только один раз
+  if (!window.__react_root__) {
+    window.__react_root__ = ReactDOM.createRoot(document.getElementById("root"));
+    window.__react_root__.render(<App />);
+  }
 }
 
-initFirebaseAndStartApp();
-
-// ==== ЗАПУСК РЕАКТА ====
-function startReactApp() {
-  ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+// защита от повторных запусков
+if (!window.__app_started__) {
+  window.__app_started__ = true;
+  initFirebaseAndStartApp();
 }
 
 function App(){
