@@ -10,24 +10,18 @@ const SUBJECTS = [
 
 // ==== Firebase ====
 // ==== ИНИЦИАЛИЗАЦИЯ FIREBASE И ЗАПУСК ПРИЛОЖЕНИЯ ====
-// ==== ИНИЦИАЛИЗАЦИЯ FIREBASE И ЗАПУСК РЕАКТА ====
-function showLoadingScreen(message = "🚀 Загрузка приложения...") {
-  const root = document.getElementById("root");
-  root.innerHTML = `<div style="font-family:sans-serif;text-align:center;margin-top:100px;color:#666;">${message}</div>`;
-}
+// ==== ИНИЦИАЛИЗАЦИЯ FIREBASE ====
+let firebaseReady = false;
+window.db = null;
 
-async function initFirebaseAndStartApp() {
-  showLoadingScreen("⏳ Загружаем конфигурацию Firebase...");
+function initFirebase() {
+  if (firebaseReady) return;
 
-  // ждём переменные окружения
-  for (let i = 0; i < 25; i++) {
-    if (window.env && window.env.FIREBASE_API_KEY) break;
-    await new Promise(r => setTimeout(r, 200));
-  }
-
+  // ждём пока env подгрузится
   if (!window.env || !window.env.FIREBASE_API_KEY) {
-    showLoadingScreen("❌ Ошибка: переменные Firebase не загружены.");
-    throw new Error("Firebase env not loaded");
+    console.log("⏳ Ожидание переменных окружения...");
+    setTimeout(initFirebase, 200);
+    return;
   }
 
   const firebaseConfig = {
@@ -40,7 +34,6 @@ async function initFirebaseAndStartApp() {
     measurementId: window.env.FIREBASE_MEASUREMENT_ID
   };
 
-  // инициализация только один раз
   if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
     console.log("✅ Firebase инициализирован успешно");
@@ -49,22 +42,13 @@ async function initFirebaseAndStartApp() {
   }
 
   window.db = firebase.firestore();
-
-  // ждём немного, чтобы Firebase успел завершить инициализацию
-  await new Promise(r => setTimeout(r, 200));
-
-  // запускаем React
-  if (!window.__react_root__) {
-    window.__react_root__ = ReactDOM.createRoot(document.getElementById("root"));
-    window.__react_root__.render(<App />);
-  }
+  firebaseReady = true;
 }
 
-if (!window.__app_started__) {
-  window.__app_started__ = true;
-  showLoadingScreen();
-  initFirebaseAndStartApp();
-}
+// запустить инициализацию
+initFirebase();
+
+
 function App(){
   const [subjects] = React.useState(SUBJECTS);
   const [selectedSubject, setSelectedSubject] = React.useState(subjects[0]);
@@ -352,4 +336,15 @@ function App(){
   );
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+function startAppWhenReady() {
+  if (!firebaseReady) {
+    console.log("⏳ Ждём готовности Firebase перед запуском React...");
+    setTimeout(startAppWhenReady, 200);
+    return;
+  }
+  if (!window.__react_root__) {
+    window.__react_root__ = ReactDOM.createRoot(document.getElementById("root"));
+    window.__react_root__.render(<App />);
+  }
+}
+startAppWhenReady();
