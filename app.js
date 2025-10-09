@@ -6,11 +6,10 @@ const SUBJECTS = [
   "Русский язык","Технология","Физика","Физкультура"
 ];
 
-// ==== Firebase ====
+
 
 // ==== Firebase ====
-// собираем конфиг из window.env, который задался в env.js
-var firebaseConfig = window && window.env ? {
+var firebaseConfig = (window && window.env) ? {
   apiKey: window.env.FIREBASE_API_KEY,
   authDomain: window.env.FIREBASE_AUTH_DOMAIN,
   projectId: window.env.FIREBASE_PROJECT_ID,
@@ -20,16 +19,13 @@ var firebaseConfig = window && window.env ? {
   measurementId: window.env.FIREBASE_MEASUREMENT_ID
 } : null;
 
-// быстрые подсказки, если переменные не подставились
-if (!firebaseConfig || !firebaseConfig.apiKey || String(firebaseConfig.apiKey).indexOf('${') !== -1) {
-  console.error('Firebase env переменные не подставились. Проверь env.js и переменные в Vercel.');
-  alert('Проблема с ключами Firebase. Проверь env.js и Environment Variables в Vercel.');
+if (!firebaseConfig || !firebaseConfig.apiKey) {
+  console.error('Firebase env не загружен. Проверь /api/env и переменные в Vercel.');
+  alert('Проблема с ключами Firebase. Проверь /api/env и Environment Variables в Vercel.');
+} else {
+  firebase.initializeApp(firebaseConfig);
 }
-
-// Инициализация
-firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
-
 
 function App(){
   const [subjects] = React.useState(SUBJECTS);
