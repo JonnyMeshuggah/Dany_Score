@@ -9,13 +9,18 @@ const SUBJECTS = [
 
 
 // ==== Firebase ====
-let db = null;
+// ==== ИНИЦИАЛИЗАЦИЯ FIREBASE ====
+async function initFirebaseAndStartApp() {
+  // ждём пока загрузится window.env (из /api/env)
+  for (let i = 0; i < 25; i++) { // максимум 5 секунд ожидания
+    if (window.env && window.env.FIREBASE_API_KEY) break;
+    console.log("⏳ Ожидание переменных окружения...");
+    await new Promise(r => setTimeout(r, 200));
+  }
 
-function initFirebase() {
   if (!window.env || !window.env.FIREBASE_API_KEY) {
-    console.warn("⏳ Ожидание переменных окружения...");
-    setTimeout(initFirebase, 200);
-    return;
+    alert("Ошибка: не удалось загрузить переменные Firebase.");
+    throw new Error("Firebase env not loaded");
   }
 
   const firebaseConfig = {
@@ -28,19 +33,21 @@ function initFirebase() {
     measurementId: window.env.FIREBASE_MEASUREMENT_ID
   };
 
-  try {
-    firebase.initializeApp(firebaseConfig);
-    db = firebase.firestore();
-    console.log("✅ Firebase инициализирован успешно");
-  } catch (e) {
-    if (!/already exists/.test(e.message)) {
-      console.error("Ошибка инициализации Firebase:", e);
-    }
-  }
+  firebase.initializeApp(firebaseConfig);
+  window.db = firebase.firestore();
+
+  console.log("✅ Firebase инициализирован успешно");
+
+  // теперь запускаем React
+  startReactApp();
 }
 
-// запускаем инициализацию (ждёт пока env появится)
-initFirebase();
+initFirebaseAndStartApp();
+
+// ==== ЗАПУСК РЕАКТА ====
+function startReactApp() {
+  ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+}
 
 function App(){
   const [subjects] = React.useState(SUBJECTS);
