@@ -304,6 +304,45 @@ function App(){
               </div>
             </div>
           </div>
+                    {/* ==== Боевой пропуск ==== */}
+<div className="card battle-pass">
+  <h3 style={{ marginTop: 0 }}>🏆 Боевой пропуск сезона 1</h3>
+  <p className="muted">«Осенний апгрейд знаний»</p>
+
+  <div className="xp-section">
+    <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
+      <div style={{ fontWeight: 600 }}>Уровень: 6 / 10</div>
+      <div style={{ fontWeight: 600, color: "#2196f3" }}>XP: 1350 / 2000</div>
+    </div>
+    <div className="progress-bar large">
+      <div className="progress-fill" style={{ width: "68%" }}></div>
+    </div>
+  </div>
+
+  <h4 style={{ marginTop: "16px" }}>🎯 Задания</h4>
+  <ul className="bp-tasks">
+    <li className="done">✅ Получи 3 пятёрки подряд — <b>+100 XP</b></li>
+    <li className="done">✅ Сделай 10 оценок за неделю — <b>+200 XP</b></li>
+    <li>🔲 Сохрани streak 5 дней — <b>+250 XP</b></li>
+  </ul>
+
+  <h4 style={{ marginTop: "16px" }}>🎁 Награды</h4>
+  <div className="rewards-grid">
+    {[
+      { lvl: 1, reward: "+100 ₽" },
+      { lvl: 2, reward: "Стикер" },
+      { lvl: 3, reward: "+200 ₽" },
+      { lvl: 4, reward: "Бейдж «Отличник»" },
+      { lvl: 5, reward: "Бонус ×2 на день" },
+      { lvl: 10, reward: "💎 Супернаграда" }
+    ].map((r, i) => (
+      <div key={i} className={`reward ${r.lvl <= 6 ? "unlocked" : ""}`}>
+        <div className="lvl">Ур.{r.lvl}</div>
+        <div className="val">{r.reward}</div>
+      </div>
+    ))}
+  </div>
+</div>
 
           <div className="card history">
             <h3 style={{marginTop:0}}>История</h3>
