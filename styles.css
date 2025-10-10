@@ -252,3 +252,77 @@ input:focus, select:focus {
 .sidebar-overlay.active {
   display: block;
 }
+
+.battle-pass {
+  background: var(--md-surface);
+  padding-bottom: 20px;
+}
+
+.xp-section {
+  margin-top: 8px;
+}
+
+.bp-tasks {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.bp-tasks li {
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.bp-tasks li.done {
+  opacity: 0.7;
+  text-decoration: line-through;
+}
+
+.rewards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.reward {
+  background: #f9f9f9;
+  border-radius: 8px;
+  padding: 10px;
+  text-align: center;
+  border: 1px solid #eee;
+  transition: all 0.3s ease;
+}
+
+.reward.unlocked {
+  border-color: #4caf50;
+  background: linear-gradient(135deg, #e8f5e9, #f1f8e9);
+  box-shadow: 0 0 8px rgba(76, 175, 80, 0.3);
+}
+
+.reward .lvl {
+  font-weight: 700;
+  color: #555;
+}
+
+.reward .val {
+  font-size: 14px;
+  color: #333;
+}
+
+.progress-bar.large {
+  width: 100%;
+  height: 10px;
+  background: #e0e0e0;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-top: 6px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #2196f3, #4caf50);
+  border-radius: 6px;
+  transition: width 0.5s ease;
+}
+
