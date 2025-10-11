@@ -367,12 +367,31 @@ input:focus, select:focus {
 }
 
 .close-admin-btn{
-  position:absolute;top:8px;right:10px;
-  background:none;border:none;box-shadow:none;
-  cursor:pointer;color:#9e9e9e; /* только цвет контура */
-  padding:0;margin:0;line-height:1;opacity:.8;z-index:10;
+  position:absolute;
+  top:8px;
+  right:10px;
+  background:none;
+  border:none;
+  box-shadow:none;
+  cursor:pointer;
+  padding:0;
+  margin:0;
+  color:#a0a0a0;      /* светло-серый */
+  font-size:22px;
+  line-height:1;
+  opacity:.8;
   transition:opacity .2s ease,color .2s ease;
+  z-index:10;
 }
-.close-admin-btn:hover{opacity:1;color:#666;}
-.close-admin-btn:focus{outline:none;}
-.close-admin-btn svg{display:block;pointer-events:none;}
+.close-admin-btn:hover{
+  opacity:1;
+  color:#707070;      /* чуть темнее */
+}
+.close-admin-btn:focus{
+  outline:none;
+}
+.close-admin-btn .material-icons{
+  font-family:'Material Icons';
+  font-size:inherit;
+  line-height:1;
+}
