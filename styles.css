@@ -366,32 +366,35 @@ input:focus, select:focus {
   font-weight: 600;
 }
 
+/* === Минимальный крестик для панели боевого пропуска === */
 .close-admin-btn {
+  all: unset; /* обнуляем ВСЕ наследуемые стили, включая Material */
   position: absolute;
-  top: 10px;
+  top: 8px;
   right: 10px;
-  background: none !important;
-  border: none !important;
-  box-shadow: none !important;
   cursor: pointer;
-  color: #aaa !important; /* мягкий светло-серый */
+  color: #a0a0a0; /* мягкий нейтральный серый */
   font-size: 22px;
-  opacity: 0.8;
-  padding: 0;
-  margin: 0;
   line-height: 1;
-  transition: opacity 0.2s ease;
+  opacity: 0.7;
+  transition: opacity 0.2s ease, color 0.2s ease;
+  z-index: 5;
 }
 
 .close-admin-btn:hover {
   opacity: 1;
-  color: #777 !important; /* чуть темнее при наведении */
+  color: #666; /* чуть темнее при наведении */
 }
 
 .close-admin-btn:focus,
 .close-admin-btn:active {
   outline: none !important;
   background: none !important;
-  border: none !important;
   box-shadow: none !important;
+  border: none !important;
+}
+
+.close-admin-btn span {
+  display: block;
+  pointer-events: none;
 }
