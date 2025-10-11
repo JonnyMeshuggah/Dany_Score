@@ -443,7 +443,15 @@ React.useEffect(() => {
 {/* ==== Админка боевого пропуска ==== */}
 {showBPAdmin && adminAccess && (
   <div className="card battle-pass-admin">
+   <button
+  className="close-admin-btn"
+  title="Закрыть"
+  onClick={() => setShowBPAdmin(false)}
+>
+  <span className="material-icons">close</span>
+</button>
     <h3>⚙️ Администрирование боевого пропуска</h3>
+ 
 
     <div className="section">
       <h4>🎯 Задания</h4>
