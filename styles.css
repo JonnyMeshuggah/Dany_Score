@@ -368,24 +368,30 @@ input:focus, select:focus {
 
 .close-admin-btn {
   position: absolute;
-  top: 12px;
-  right: 12px;
-  background: none;
-  border: none;
+  top: 10px;
+  right: 10px;
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
   cursor: pointer;
-  color: #9e9e9e; /* мягкий серый */
+  color: #aaa !important; /* мягкий светло-серый */
   font-size: 22px;
-  opacity: 0.6;
-  transition: opacity 0.2s ease, color 0.2s ease;
-  padding: 4px;
+  opacity: 0.8;
+  padding: 0;
+  margin: 0;
   line-height: 1;
+  transition: opacity 0.2s ease;
 }
 
 .close-admin-btn:hover {
   opacity: 1;
-  color: #555; /* чуть темнее при наведении */
+  color: #777 !important; /* чуть темнее при наведении */
 }
 
-.battle-pass-admin {
-  position: relative; /* чтобы кнопка крепилась к углу */
+.close-admin-btn:focus,
+.close-admin-btn:active {
+  outline: none !important;
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
 }
