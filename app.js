@@ -443,12 +443,10 @@ React.useEffect(() => {
 {/* ==== Админка боевого пропуска ==== */}
 {showBPAdmin && adminAccess && (
   <div className="card battle-pass-admin">
-   <button
-  className="close-admin-btn"
-  title="Закрыть"
-  onClick={() => setShowBPAdmin(false)}
->
-  <span className="material-icons">close</span>
+   <button className="close-admin-btn" title="Закрыть" onClick={() => setShowBPAdmin(false)} aria-label="Закрыть">
+  <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M18 6L6 18M6 6l12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+  </svg>
 </button>
     <h3>⚙️ Администрирование боевого пропуска</h3>
  
