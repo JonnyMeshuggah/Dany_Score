@@ -94,6 +94,64 @@ function App(){
       .catch(err=>console.error("Save error:", err));
   },[balance, history, loaded, user]);
 
+React.useEffect(() => {
+  const btn = document.getElementById("battlePassAdmin");
+  const panel = document.getElementById("battlePassAdminPanel");
+  const addTaskBtn = document.getElementById("addTaskBtn");
+  const addRewardBtn = document.getElementById("addRewardBtn");
+  const resetBtn = document.getElementById("resetSeason");
+
+  if (!btn || !panel) return;
+
+  const togglePanel = () => {
+    panel.style.display = panel.style.display === "none" ? "block" : "none";
+  };
+
+  const addTask = () => {
+    const name = document.getElementById("newTaskName").value.trim();
+    const xp = document.getElementById("newTaskXP").value.trim();
+    if (!name || !xp) return alert("Введите название и XP");
+    const li = document.createElement("li");
+    li.textContent = `${name} — +${xp} XP`;
+    document.getElementById("taskList").appendChild(li);
+    document.getElementById("newTaskName").value = "";
+    document.getElementById("newTaskXP").value = "";
+  };
+
+  const addReward = () => {
+    const lvl = document.getElementById("newRewardLvl").value.trim();
+    const text = document.getElementById("newRewardText").value.trim();
+    if (!lvl || !text) return alert("Введите уровень и награду");
+    const li = document.createElement("li");
+    li.textContent = `Уровень ${lvl} — ${text}`;
+    document.getElementById("rewardList").appendChild(li);
+    document.getElementById("newRewardLvl").value = "";
+    document.getElementById("newRewardText").value = "";
+  };
+
+  const reset = () => {
+    if (confirm("Точно сбросить сезон?")) {
+      document.getElementById("taskList").innerHTML = "";
+      document.getElementById("rewardList").innerHTML = "";
+      alert("Боевой пропуск сброшен ✅");
+    }
+  };
+
+  btn.addEventListener("click", togglePanel);
+  addTaskBtn.addEventListener("click", addTask);
+  addRewardBtn.addEventListener("click", addReward);
+  resetBtn.addEventListener("click", reset);
+
+  return () => {
+    btn.removeEventListener("click", togglePanel);
+    addTaskBtn.removeEventListener("click", addTask);
+    addRewardBtn.removeEventListener("click", addReward);
+    resetBtn.removeEventListener("click", reset);
+  };
+}, []);
+
+
+  
   // ---- Auth actions
   const register = async ()=>{
     try{
