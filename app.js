@@ -425,39 +425,42 @@ React.useEffect(() => {
           </div>
 
 {/* ==== Админка боевого пропуска ==== */}
-<div className="card battle-pass-admin" id="battlePassAdminPanel" style={{ display: "none" }}>
-  <h3>⚙️ Администрирование боевого пропуска</h3>
+{showBPAdmin && (
+  <div className="card battle-pass-admin">
+    <h3>⚙️ Администрирование боевого пропуска</h3>
 
-  <div className="section">
-    <h4>🎯 Задания</h4>
-    <ul className="admin-list" id="taskList">
-      <li>✅ Получи 3 пятёрки подряд — <b>+100 XP</b></li>
-      <li>✅ Сделай 10 оценок за неделю — <b>+200 XP</b></li>
-    </ul>
-    <div className="row">
-      <input type="text" id="newTaskName" placeholder="Название задания" />
-      <input type="number" id="newTaskXP" placeholder="XP" style={{ width: "80px" }} />
-      <button id="addTaskBtn">Добавить</button>
+    <div className="section">
+      <h4>🎯 Задания</h4>
+      <ul className="admin-list" id="taskList">
+        <li>✅ Получи 3 пятёрки подряд — <b>+100 XP</b></li>
+        <li>✅ Сделай 10 оценок за неделю — <b>+200 XP</b></li>
+      </ul>
+      <div className="row">
+        <input type="text" id="newTaskName" placeholder="Название задания" />
+        <input type="number" id="newTaskXP" placeholder="XP" style={{ width: "80px" }} />
+        <button id="addTaskBtn">Добавить</button>
+      </div>
+    </div>
+
+    <div className="section">
+      <h4>🎁 Награды</h4>
+      <ul className="admin-list" id="rewardList">
+        <li>Уровень 1 — +100 ₽</li>
+        <li>Уровень 2 — Стикер</li>
+      </ul>
+      <div className="row">
+        <input type="number" id="newRewardLvl" placeholder="Уровень" style={{ width: "80px" }} />
+        <input type="text" id="newRewardText" placeholder="Награда" />
+        <button id="addRewardBtn">Добавить</button>
+      </div>
+    </div>
+
+    <div className="section" style={{ textAlign: "right", marginTop: "10px" }}>
+      <button id="resetSeason" className="danger-btn">Сбросить сезон</button>
     </div>
   </div>
+)}
 
-  <div className="section">
-    <h4>🎁 Награды</h4>
-    <ul className="admin-list" id="rewardList">
-      <li>Уровень 1 — +100 ₽</li>
-      <li>Уровень 2 — Стикер</li>
-    </ul>
-    <div className="row">
-      <input type="number" id="newRewardLvl" placeholder="Уровень" style={{ width: "80px" }} />
-      <input type="text" id="newRewardText" placeholder="Награда" />
-      <button id="addRewardBtn">Добавить</button>
-    </div>
-  </div>
-
-  <div className="section" style={{ textAlign: "right", marginTop: "10px" }}>
-    <button id="resetSeason" className="danger-btn">Сбросить сезон</button>
-  </div>
-</div>
               
         </React.Fragment>
       )}
