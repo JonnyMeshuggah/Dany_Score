@@ -54,6 +54,7 @@ function App(){
   const [selectedSubject, setSelectedSubject] = React.useState(subjects[0]);
   const [grade, setGrade] = React.useState(5);
   const [cashOutAmount, setCashOutAmount] = React.useState("");
+  const [showBPAdmin, setShowBPAdmin] = React.useState(false);
 
   const [balance, setBalance] = React.useState(0);
   const [history, setHistory] = React.useState([]);
