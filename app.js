@@ -269,6 +269,7 @@ React.useEffect(() => {
   const close = document.getElementById('closeSidebar');
   const exportBtn = document.getElementById('exportBtn');
   const importFile = document.getElementById('importFile');
+    const bpBtn = document.getElementById('battlePassAdmin');
 
   if(!burger || !sidebar || !close || !exportBtn || !importFile) return;
 
@@ -279,6 +280,7 @@ React.useEffect(() => {
   const closeFn = ()=>sidebar.classList.remove('open');
   const onExport = ()=>exportCSV();
   const onImportChange = (e)=>{ if(e.target.files[0]) importCSV(e.target.files[0]); };
+  const onBP = ()=>{ setShowBPAdmin(prev=>!prev); closeFn(); };
 
   // закрытие при клике вне панели
   const clickOutside = (e)=>{
@@ -294,6 +296,7 @@ React.useEffect(() => {
   exportBtn.addEventListener('click', onExport);
   importFile.addEventListener('change', onImportChange);
   document.addEventListener('click', clickOutside);
+  if (bpBtn) bpBtn.addEventListener('click', onBP);
 
   return ()=>{
     burger.removeEventListener('click', open);
@@ -301,6 +304,7 @@ React.useEffect(() => {
     exportBtn.removeEventListener('click', onExport);
     importFile.removeEventListener('change', onImportChange);
     document.removeEventListener('click', clickOutside);
+  if (bpBtn) bpBtn.removeEventListener('click', onBP);
   };
 },[history, user]); // зависимость нужна, чтобы экспорт видел актуальные данные
 
