@@ -55,6 +55,8 @@ function App(){
   const [grade, setGrade] = React.useState(5);
   const [cashOutAmount, setCashOutAmount] = React.useState("");
   const [showBPAdmin, setShowBPAdmin] = React.useState(false);
+  const [adminAccess, setAdminAccess] = React.useState(false);
+  const [adminCode, setAdminCode] = React.useState("");
 
   const [balance, setBalance] = React.useState(0);
   const [history, setHistory] = React.useState([]);
@@ -280,7 +282,17 @@ React.useEffect(() => {
   const closeFn = ()=>sidebar.classList.remove('open');
   const onExport = ()=>exportCSV();
   const onImportChange = (e)=>{ if(e.target.files[0]) importCSV(e.target.files[0]); };
-  const onBP = ()=>{ setShowBPAdmin(prev=>!prev); closeFn(); };
+  const onBP = () => {
+  const code = prompt("Введите код доступа для открытия админки:");
+  if (code === "1234") { // ← можешь поставить свой секретный код
+    setAdminAccess(true);
+    setShowBPAdmin(true);
+    alert("✅ Доступ разрешён");
+  } else {
+    alert("⛔ Неверный код доступа");
+  }
+  closeFn();
+};
 
   // закрытие при клике вне панели
   const clickOutside = (e)=>{
@@ -429,7 +441,7 @@ React.useEffect(() => {
           </div>
 
 {/* ==== Админка боевого пропуска ==== */}
-{showBPAdmin && (
+{showBPAdmin && adminAccess && (
   <div className="card battle-pass-admin">
     <h3>⚙️ Администрирование боевого пропуска</h3>
 
