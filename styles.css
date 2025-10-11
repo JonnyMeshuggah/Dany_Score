@@ -365,3 +365,25 @@ input:focus, select:focus {
   cursor: pointer;
   font-weight: 600;
 }
+
+
+.close-admin-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #666;
+  font-size: 20px;
+  transition: color 0.2s ease;
+}
+
+.close-admin-btn:hover {
+  color: #000;
+}
+
+.battle-pass-admin {
+  position: relative; /* нужно для абсолютного позиционирования крестика */
+  background: var(--md-surface);
+}
