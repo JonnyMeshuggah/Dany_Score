@@ -61,6 +61,7 @@ function App(){
   const [balance, setBalance] = React.useState(0);
   const [history, setHistory] = React.useState([]);
   const [loaded, setLoaded] = React.useState(false);
+  const [historyReadyForSave, setHistoryReadyForSave] = React.useState(true);
 
   const [user, setUser] = React.useState(null);
   const [email, setEmail] = React.useState("");
@@ -70,7 +71,7 @@ function App(){
   React.useEffect(()=>{
     return firebase.auth().onAuthStateChanged(u=>{
       setUser(u);
-      if(!u){ setHistory([]); setBalance(0); setLoaded(false); }
+      if(!u){ setHistory([]); setBalance(0); setLoaded(false); setHistoryReadyForSave(true); }
     });
   },[]);
 
@@ -80,10 +81,28 @@ function App(){
     const unsub = db.collection("users").doc(user.uid).onSnapshot(doc=>{
       if(doc.exists){
         const data = doc.data();
-        setHistory(Array.isArray(data.history)? data.history : []);
+        const rawHistory = data.history;
+        let normalizedHistory = [];
+        let historyIsSafeToPersist = true;
+
+        if (Array.isArray(rawHistory)) {
+          normalizedHistory = rawHistory;
+        } else if (rawHistory == null) {
+          normalizedHistory = [];
+        } else if (typeof rawHistory === "object") {
+          normalizedHistory = Object.values(rawHistory);
+        } else {
+          console.warn("Неожиданный формат history в Firestore, пропускаем автосохранение", rawHistory);
+          historyIsSafeToPersist = false;
+        }
+
+        if (historyIsSafeToPersist) {
+          setHistory(normalizedHistory);
+        }
+        setHistoryReadyForSave(historyIsSafeToPersist);
         setBalance(typeof data.balance === "number" ? data.balance : 0);
       } else {
-        setHistory([]); setBalance(0);
+        setHistory([]); setBalance(0); setHistoryReadyForSave(true);
       }
       setLoaded(true);
     }, err => console.error("onSnapshot error:", err));
@@ -92,10 +111,10 @@ function App(){
 
   // ---- Save
   React.useEffect(()=>{
-    if(!loaded || !user) return;
+    if(!loaded || !user || !historyReadyForSave) return;
     db.collection("users").doc(user.uid).set({ balance, history })
       .catch(err=>console.error("Save error:", err));
-  },[balance, history, loaded, user]);
+  },[balance, history, historyReadyForSave, loaded, user]);
 
 React.useEffect(() => {
   const btn = document.getElementById("battlePassAdmin");
@@ -197,6 +216,7 @@ React.useEffect(() => {
 
     const total = reward * bonus;
     setBalance(balance + total);
+    setHistoryReadyForSave(true);
     setHistory([{date, subject:selectedSubject, grade, reward: total, bonus: bonusDesc}, ...history]);
   };
 
@@ -204,6 +224,7 @@ React.useEffect(() => {
     const e = history[i];
     setBalance(balance - e.reward);
     const arr = [...history]; arr.splice(i,1);
+    setHistoryReadyForSave(true);
     setHistory(arr);
   };
 
@@ -214,6 +235,7 @@ React.useEffect(() => {
     if(amount>balance) return alert("Сумма больше баланса");
     if(window.confirm(`Выдать ${amount} ₽ и уменьшить баланс?`)){
       const date = new Date().toLocaleDateString("ru-RU");
+      setHistoryReadyForSave(true);
       setHistory([{date, subject:"💸 Вывод средств", grade:"—", reward: -amount, bonus:"Частичный вывод"}, ...history]);
       setBalance(balance - amount);
       setCashOutAmount("");
@@ -255,6 +277,7 @@ React.useEffect(() => {
       });
       const total = data.reduce((s,x)=>s+(isFinite(x.reward)?x.reward:0),0);
       if(window.confirm("Загрузить историю из файла и заменить текущую?")){
+        setHistoryReadyForSave(true);
         setHistory(data); setBalance(total);
       }
       // сбрасываем value, чтобы можно было выбрать тот же файл повторно
