@@ -61,6 +61,7 @@ function App(){
   const [balance, setBalance] = React.useState(0);
   const [history, setHistory] = React.useState([]);
   const [loaded, setLoaded] = React.useState(false);
+  const [hydrated, setHydrated] = React.useState(false);
   const [historyReadyForSave, setHistoryReadyForSave] = React.useState(true);
 
   const [user, setUser] = React.useState(null);
@@ -78,48 +79,61 @@ function App(){
   // ---- Real-time load
   React.useEffect(()=>{
     if(!user) return;
-    const unsub = db.collection("users").doc(user.uid).onSnapshot(doc=>{
-      if(doc.exists){
-        const data = doc.data();
-        const rawHistory = data.history;
-        let normalizedHistory = [];
-        let historyIsSafeToPersist = true;
+  const unsub = db.collection("users").doc(user.uid).onSnapshot(
+  { includeMetadataChanges: true },
+  (doc) => {
 
-        if (Array.isArray(rawHistory)) {
-          normalizedHistory = rawHistory;
-        } else if (rawHistory == null) {
-          normalizedHistory = [];
-       } else if (typeof rawHistory === "object") {
-  console.warn(
-    "history в Firestore не массив (object). Чтобы не перезаписать данные, автосохранение отключено.",
-    rawHistory
-  );
-  normalizedHistory = [];
-  historyIsSafeToPersist = false;
-} else {
-  console.warn(
-    "Неожиданный формат history в Firestore, пропускаем автосохранение",
-    rawHistory
-  );
-  historyIsSafeToPersist = false;
-}
-        if (historyIsSafeToPersist) {
-          setHistory(normalizedHistory);
-        }
-        setHistoryReadyForSave(historyIsSafeToPersist);
-        setBalance(typeof data.balance === "number" ? data.balance : 0);
+    // ❗ если это кэш и документа нет — НИЧЕГО НЕ ДЕЛАЕМ
+    if (doc.metadata.fromCache && !doc.exists) {
+      setHistoryReadyForSave(false);
+      return;
+    }
+
+    // серверные данные получены
+    if (!doc.metadata.fromCache) {
+      setHydrated(true);
+    }
+
+    if (doc.exists) {
+      const data = doc.data();
+      const rawHistory = data.history;
+      let normalizedHistory = [];
+      let historyIsSafeToPersist = true;
+
+      if (Array.isArray(rawHistory)) {
+        normalizedHistory = rawHistory;
+      } else if (rawHistory == null) {
+        normalizedHistory = [];
       } else {
-        setHistory([]); setBalance(0); setHistoryReadyForSave(true);
+        console.warn("history некорректного типа, автосохранение отключено", rawHistory);
+        historyIsSafeToPersist = false;
+        normalizedHistory = [];
       }
-      setLoaded(true);
-    }, err => console.error("onSnapshot error:", err));
+
+      if (historyIsSafeToPersist) setHistory(normalizedHistory);
+      setHistoryReadyForSave(historyIsSafeToPersist);
+      setBalance(typeof data.balance === "number" ? data.balance : 0);
+
+    } else {
+      setHistory([]);
+      setBalance(0);
+      setHistoryReadyForSave(true);
+    }
+
+    setLoaded(true);
+  },
+  (err) => console.error("onSnapshot error:", err)
+);
     return ()=>unsub();
   },[user]);
 
   // ---- Save
   React.useEffect(()=>{
-    if(!loaded || !user || !historyReadyForSave) return;
-    db.collection("users").doc(user.uid).set({ balance, history }, { merge: true })
+  if(!loaded || !user || !historyReadyForSave || !hydrated) return;
+db.collection("users").doc(user.uid).set(
+  { balance, history },
+  { merge: true }
+)
       .catch(err=>console.error("Save error:", err));
   },[balance, history, historyReadyForSave, loaded, user]);
 
