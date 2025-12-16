@@ -89,13 +89,20 @@ function App(){
           normalizedHistory = rawHistory;
         } else if (rawHistory == null) {
           normalizedHistory = [];
-        } else if (typeof rawHistory === "object") {
-          normalizedHistory = Object.values(rawHistory);
-        } else {
-          console.warn("Неожиданный формат history в Firestore, пропускаем автосохранение", rawHistory);
-          historyIsSafeToPersist = false;
-        }
-
+       } else if (typeof rawHistory === "object") {
+  console.warn(
+    "history в Firestore не массив (object). Чтобы не перезаписать данные, автосохранение отключено.",
+    rawHistory
+  );
+  normalizedHistory = [];
+  historyIsSafeToPersist = false;
+} else {
+  console.warn(
+    "Неожиданный формат history в Firestore, пропускаем автосохранение",
+    rawHistory
+  );
+  historyIsSafeToPersist = false;
+}
         if (historyIsSafeToPersist) {
           setHistory(normalizedHistory);
         }
@@ -112,7 +119,7 @@ function App(){
   // ---- Save
   React.useEffect(()=>{
     if(!loaded || !user || !historyReadyForSave) return;
-    db.collection("users").doc(user.uid).set({ balance, history })
+    db.collection("users").doc(user.uid).set({ balance, history }, { merge: true })
       .catch(err=>console.error("Save error:", err));
   },[balance, history, historyReadyForSave, loaded, user]);
 
