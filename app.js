@@ -816,7 +816,7 @@ db.collection("users").doc(user.uid).set(
               const hasMore = !showAllHistory && history.length > filteredHistory.length;
 
               return (
-                <>
+                <React.Fragment>
                   {filteredHistory.map((h,i)=>{
                     // Находим реальный индекс в полной истории для удаления
                     const realIndex = history.findIndex(entry => entry === h);
@@ -846,20 +846,20 @@ db.collection("users").doc(user.uid).set(
                         style={{fontSize: '14px'}}
                       >
                         {showAllHistory ? (
-                          <>
+                          <React.Fragment>
                             <span className="material-icons" style={{fontSize: '18px', verticalAlign: 'middle'}}>expand_less</span>
                             Показать только последние 3 дня
-                          </>
+                          </React.Fragment>
                         ) : (
-                          <>
+                          <React.Fragment>
                             <span className="material-icons" style={{fontSize: '18px', verticalAlign: 'middle'}}>expand_more</span>
                             Показать всю историю ({history.length - filteredHistory.length} скрыто)
-                          </>
+                          </React.Fragment>
                         )}
                       </button>
                     </div>
                   )}
-                </>
+                </React.Fragment>
               );
             })()}
           </div>
