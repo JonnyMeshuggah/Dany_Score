@@ -907,6 +907,23 @@ db.collection("users").doc(user.uid).set(
               <h3>⚙️ Администрирование боевого пропуска</h3>
 
               <div className="section">
+                <h4>📝 Название сезона</h4>
+                <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
+                  <input
+                    type="text"
+                    value={battlePass.seasonName}
+                    onChange={(e) => {
+                      setBattlePass(prev => ({...prev, seasonName: e.target.value}));
+                      setBpUnsavedChanges(true);
+                    }}
+                    placeholder="Например: Осенний апгрейд знаний"
+                    style={{flex: 1}}
+                  />
+                  <span className="muted" style={{fontSize: '13px'}}>Сезон #{battlePass.season}</span>
+                </div>
+              </div>
+
+              <div className="section">
                 <h4>🎯 Задания</h4>
                 <ul className="admin-list">
                   {battlePass.tasks.length === 0 ? (
