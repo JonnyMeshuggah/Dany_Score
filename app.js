@@ -1,5 +1,5 @@
 // ==== Версия приложения ====
-const APP_VERSION = "v1.0.7";
+const APP_VERSION = "v1.0.8-debug";
 
 // ==== Бизнес-логика наград ====
 const baseRewards = {5: 250, 4: 100, 3: -500, 2: -2000};
@@ -148,6 +148,9 @@ function App(){
       // Загружаем данные боевого пропуска ТОЛЬКО из серверных данных, не из кеша
       // Это предотвращает затирание свежесохраненных настроек старыми данными из кеша
       if(data.battlePass && !doc.metadata.fromCache){
+        console.log("🟢 Загружаем battlePass из Firestore:", data.battlePass);
+        console.log("  seasonName из базы:", data.battlePass.seasonName);
+
         setBattlePass(prev => ({
           ...prev,
           ...data.battlePass,
@@ -389,20 +392,24 @@ db.collection("users").doc(user.uid).set(
     if(!user) return;
 
     try {
-      // Сохраняем настройки админки используя update с dot notation
-      await db.collection("users").doc(user.uid).update({
+      const dataToSave = {
         'battlePass.season': battlePass.season,
         'battlePass.seasonName': battlePass.seasonName,
         'battlePass.maxLevel': battlePass.maxLevel,
         'battlePass.xpPerLevel': battlePass.xpPerLevel,
         'battlePass.tasks': battlePass.tasks,
         'battlePass.rewards': battlePass.rewards
-      });
+      };
+      console.log("🔵 Сохраняем в Firestore:", dataToSave);
+
+      await db.collection("users").doc(user.uid).update(dataToSave);
+
+      console.log("✅ Сохранено успешно");
       setBpUnsavedChanges(false);
       alert("✅ Изменения боевого пропуска сохранены!");
     } catch(err) {
-      console.error("Ошибка сохранения:", err);
-      alert("❌ Ошибка при сохранении. Попробуйте еще раз.");
+      console.error("❌ Ошибка сохранения:", err);
+      alert("❌ Ошибка при сохранении: " + err.message);
     }
   };
 
