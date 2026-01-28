@@ -1,5 +1,5 @@
 // ==== Версия приложения ====
-const APP_VERSION = "v1.1.1";
+const APP_VERSION = "v1.1.2";
 
 // ==== Бизнес-логика наград ====
 const baseRewards = {5: 250, 4: 100, 3: -500, 2: -2000};
@@ -66,6 +66,7 @@ function App(){
   const [loaded, setLoaded] = React.useState(false);
   const [hydrated, setHydrated] = React.useState(false);
   const [historyReadyForSave, setHistoryReadyForSave] = React.useState(true);
+  const [isSaving, setIsSaving] = React.useState(false);
 
   const [user, setUser] = React.useState(null);
   const [email, setEmail] = React.useState("");
@@ -131,9 +132,12 @@ function App(){
         normalizedHistory = [];
       }
 
-      if (historyIsSafeToPersist) setHistory(normalizedHistory);
+      // НЕ перезаписываем локальное состояние пока идет сохранение
+      if (historyIsSafeToPersist && !isSaving) {
+        setHistory(normalizedHistory);
+        setBalance(typeof data.balance === "number" ? data.balance : 0);
+      }
       setHistoryReadyForSave(historyIsSafeToPersist);
-      setBalance(typeof data.balance === "number" ? data.balance : 0);
 
       // Загружаем данные боевого пропуска
       if(data.battlePass){
@@ -168,12 +172,21 @@ function App(){
   // ---- Save (автосохранение только баланса и истории)
   React.useEffect(()=>{
   if(!loaded || !user || !historyReadyForSave || !hydrated) return;
-db.collection("users").doc(user.uid).set(
-  { balance, history },
-  { merge: true }
-)
-      .catch(err=>console.error("Save error:", err));
-  },[balance, history, historyReadyForSave, loaded, user]);
+
+  setIsSaving(true);
+  db.collection("users").doc(user.uid).set(
+    { balance, history },
+    { merge: true }
+  )
+      .then(() => {
+        console.log("💾 История и баланс сохранены");
+        setTimeout(() => setIsSaving(false), 500); // Даем время onSnapshot обработать
+      })
+      .catch(err => {
+        console.error("Save error:", err);
+        setIsSaving(false);
+      });
+  },[balance, history, historyReadyForSave, loaded, user, hydrated]);
 
   // ---- Auto-save battlePass ОТКЛЮЧЕНО - вызывало Quota exceeded
   // Игровой прогресс сохраняется вместе с настройками админки через кнопку "Сохранить"
