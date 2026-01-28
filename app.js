@@ -183,16 +183,23 @@ db.collection("users").doc(user.uid).set(
   // ---- Auto-save battlePass (только игровые изменения: XP, level, completedTasks, claimedRewards)
   React.useEffect(()=>{
   if(!loaded || !user || !hydrated) return;
+  // НЕ автосохраняем, если есть несохраненные изменения в админке
+  if(bpUnsavedChanges) return;
 
-  // Используем update с точечной нотацией для сохранения только игровых полей
-  db.collection("users").doc(user.uid).update({
-    'battlePass.xp': battlePass.xp,
-    'battlePass.level': battlePass.level,
-    'battlePass.completedTasks': battlePass.completedTasks,
-    'battlePass.claimedRewards': battlePass.claimedRewards
-  })
+  // Сохраняем только игровой прогресс
+  const gameProgress = {
+    xp: battlePass.xp,
+    level: battlePass.level,
+    completedTasks: battlePass.completedTasks,
+    claimedRewards: battlePass.claimedRewards
+  };
+
+  db.collection("users").doc(user.uid).set(
+    { battlePass: gameProgress },
+    { merge: true }
+  )
       .catch(err=>console.error("BattlePass save error:", err));
-  },[battlePass.xp, battlePass.level, battlePass.completedTasks, battlePass.claimedRewards, loaded, user, hydrated]);
+  },[battlePass.xp, battlePass.level, battlePass.completedTasks, battlePass.claimedRewards, loaded, user, hydrated, bpUnsavedChanges]);
 
 
 
@@ -384,15 +391,20 @@ db.collection("users").doc(user.uid).set(
     if(!user) return;
 
     try {
-      // Используем update с dot notation для сохранения настроек админки
-      await db.collection("users").doc(user.uid).update({
-        'battlePass.season': battlePass.season,
-        'battlePass.seasonName': battlePass.seasonName,
-        'battlePass.maxLevel': battlePass.maxLevel,
-        'battlePass.xpPerLevel': battlePass.xpPerLevel,
-        'battlePass.tasks': battlePass.tasks,
-        'battlePass.rewards': battlePass.rewards
-      });
+      // Сохраняем только настройки админки (не игровой прогресс)
+      const adminSettings = {
+        season: battlePass.season,
+        seasonName: battlePass.seasonName,
+        maxLevel: battlePass.maxLevel,
+        xpPerLevel: battlePass.xpPerLevel,
+        tasks: battlePass.tasks,
+        rewards: battlePass.rewards
+      };
+
+      await db.collection("users").doc(user.uid).set(
+        { battlePass: adminSettings },
+        { merge: true }
+      );
       setBpUnsavedChanges(false);
       alert("✅ Изменения боевого пропуска сохранены!");
     } catch(err) {
