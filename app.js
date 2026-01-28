@@ -1,5 +1,5 @@
 // ==== Версия приложения ====
-const APP_VERSION = "v1.1.2";
+const APP_VERSION = "v1.1.3-debug";
 
 // ==== Бизнес-логика наград ====
 const baseRewards = {5: 250, 4: 100, 3: -500, 2: -2000};
@@ -576,6 +576,9 @@ function App(){
 
     // серии по предмету
     const sameSubject = history.filter(h=>h.subject===selectedSubject);
+    console.log(`📊 История по предмету "${selectedSubject}":`, sameSubject.length, "записей");
+    console.log("  Последние оценки:", sameSubject.slice(-5).map(h => `${h.date}: ${h.grade}`));
+
     const lastTwo = sameSubject.slice(-2).map(e=>e.grade);
     if(grade===5){
       if(lastTwo.length>=2 && lastTwo[0]===5 && lastTwo[1]===5){
