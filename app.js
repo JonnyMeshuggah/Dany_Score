@@ -68,6 +68,20 @@ function App(){
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
 
+  // ---- Battle Pass State
+  const [battlePass, setBattlePass] = React.useState({
+    xp: 0,
+    level: 1,
+    season: 1,
+    seasonName: "Осенний апгрейд знаний",
+    maxLevel: 10,
+    xpPerLevel: 200, // XP нужно на каждый уровень
+    tasks: [],
+    rewards: [],
+    completedTasks: [], // массив ID выполненных заданий
+    claimedRewards: [] // массив ID полученных наград
+  });
+
   // ---- Auth
   React.useEffect(()=>{
     return firebase.auth().onAuthStateChanged(u=>{
@@ -231,6 +245,132 @@ React.useEffect(() => {
     return { stats, average, maxCount, totalGrades };
   };
 
+  // ---- Battle Pass функции
+  // Расчёт уровня по XP
+  const getLevelFromXP = (xp) => {
+    const level = Math.floor(xp / battlePass.xpPerLevel) + 1;
+    return Math.min(level, battlePass.maxLevel);
+  };
+
+  // Расчёт XP для текущего уровня
+  const getCurrentLevelProgress = () => {
+    const currentLevelXP = (battlePass.level - 1) * battlePass.xpPerLevel;
+    const xpInCurrentLevel = battlePass.xp - currentLevelXP;
+    return {
+      current: xpInCurrentLevel,
+      needed: battlePass.xpPerLevel,
+      percentage: Math.min((xpInCurrentLevel / battlePass.xpPerLevel) * 100, 100)
+    };
+  };
+
+  // Добавление XP
+  const addXP = (amount, reason) => {
+    const newXP = battlePass.xp + amount;
+    const newLevel = getLevelFromXP(newXP);
+    const oldLevel = battlePass.level;
+
+    setBattlePass(prev => ({
+      ...prev,
+      xp: newXP,
+      level: newLevel
+    }));
+
+    // Уведомление о повышении уровня
+    if(newLevel > oldLevel){
+      alert(`🎉 Поздравляем! Достигнут уровень ${newLevel}! Проверьте награды.`);
+    }
+  };
+
+  // Отметить задание как выполненное
+  const completeTask = (taskId, xpReward) => {
+    if(battlePass.completedTasks.includes(taskId)) return; // уже выполнено
+
+    setBattlePass(prev => ({
+      ...prev,
+      completedTasks: [...prev.completedTasks, taskId]
+    }));
+
+    addXP(xpReward, `Выполнено задание`);
+  };
+
+  // Получить награду
+  const claimReward = (rewardId) => {
+    const reward = battlePass.rewards.find(r => r.id === rewardId);
+    if(!reward || battlePass.claimedRewards.includes(rewardId)) return;
+
+    // Проверка уровня
+    if(battlePass.level < reward.level){
+      alert(`Эта награда доступна на уровне ${reward.level}`);
+      return;
+    }
+
+    setBattlePass(prev => ({
+      ...prev,
+      claimedRewards: [...prev.claimedRewards, rewardId]
+    }));
+
+    // Если награда денежная - добавляем на баланс
+    if(reward.type === 'money' && reward.amount){
+      const date = new Date().toLocaleDateString("ru-RU");
+      setBalance(balance + reward.amount);
+      setHistory([{
+        date,
+        subject: `🏆 Награда BP (Ур.${reward.level})`,
+        grade: "—",
+        reward: reward.amount,
+        bonus: reward.text
+      }, ...history]);
+      alert(`✅ ${reward.text} зачислено на баланс!`);
+    } else {
+      alert(`✅ Награда "${reward.text}" отмечена как полученная!`);
+    }
+  };
+
+  // Проверка заданий боевого пропуска
+  const checkBattlePassTasks = (updatedHistory) => {
+    battlePass.tasks.forEach(task => {
+      // Пропускаем уже выполненные задания
+      if(battlePass.completedTasks.includes(task.id)) return;
+
+      let completed = false;
+
+      // Проверка по типу задания
+      if(task.type === 'streak_fives'){
+        // Проверка N пятёрок подряд
+        const recentGrades = updatedHistory.slice(0, task.target || 3);
+        const allFives = recentGrades.every(h => h.grade === 5);
+        if(recentGrades.length >= (task.target || 3) && allFives){
+          completed = true;
+        }
+      } else if(task.type === 'total_grades_week'){
+        // Проверка N оценок за неделю
+        const weekAgo = new Date();
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        const weekGrades = updatedHistory.filter(h => {
+          const parts = h.date.split('.');
+          if(parts.length === 3){
+            const entryDate = new Date(parts[2], parts[1]-1, parts[0]);
+            return entryDate >= weekAgo;
+          }
+          return false;
+        });
+        if(weekGrades.length >= (task.target || 10)){
+          completed = true;
+        }
+      } else if(task.type === 'average_score'){
+        // Проверка среднего балла
+        const { average } = calculateStats();
+        if(parseFloat(average) >= (task.target || 4.5)){
+          completed = true;
+        }
+      }
+
+      if(completed){
+        completeTask(task.id, task.xp || 100);
+      }
+    });
+  };
+
   // ---- App logic
   const addGrade = ()=>{
     if(!user) return alert("Сначала войдите в аккаунт");
@@ -259,7 +399,11 @@ React.useEffect(() => {
     const total = reward * bonus;
     setBalance(balance + total);
     setHistoryReadyForSave(true);
-    setHistory([{date, subject:selectedSubject, grade, reward: total, bonus: bonusDesc}, ...history]);
+    const updatedHistory = [{date, subject:selectedSubject, grade, reward: total, bonus: bonusDesc}, ...history];
+    setHistory(updatedHistory);
+
+    // Проверяем задания боевого пропуска
+    checkBattlePassTasks(updatedHistory);
   };
 
   const deleteEntry = (i)=>{
