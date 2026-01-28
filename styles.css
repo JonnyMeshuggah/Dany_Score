@@ -292,12 +292,55 @@ input:focus, select:focus {
   text-align: center;
   border: 1px solid #eee;
   transition: all 0.3s ease;
+  position: relative;
+  cursor: default;
 }
 
+/* Заблокированная награда (уровень не достигнут) */
+.reward.locked {
+  background: #f5f5f5;
+  border-color: #ddd;
+  opacity: 0.6;
+  color: #999;
+}
+
+/* Разблокированная награда (можно получить) */
 .reward.unlocked {
   border-color: #4caf50;
   background: linear-gradient(135deg, #e8f5e9, #f1f8e9);
-  box-shadow: 0 0 8px rgba(76, 175, 80, 0.3);
+  box-shadow: 0 0 12px rgba(76, 175, 80, 0.4);
+  cursor: pointer;
+  animation: pulse 2s infinite;
+}
+
+.reward.unlocked:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 16px rgba(76, 175, 80, 0.6);
+}
+
+/* Полученная награда */
+.reward.claimed {
+  border-color: #bbb;
+  background: #e0e0e0;
+  opacity: 0.7;
+}
+
+/* Бейдж подтверждения */
+.claimed-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-size: 14px;
+}
+
+/* Анимация пульсации для разблокированных наград */
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 0 12px rgba(76, 175, 80, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(76, 175, 80, 0.6);
+  }
 }
 
 .reward .lvl {

@@ -82,6 +82,16 @@ function App(){
     claimedRewards: [] // массив ID полученных наград
   });
 
+  // ---- BP Admin State
+  const [newTaskName, setNewTaskName] = React.useState("");
+  const [newTaskXP, setNewTaskXP] = React.useState("");
+  const [newTaskType, setNewTaskType] = React.useState("streak_fives");
+  const [newTaskTarget, setNewTaskTarget] = React.useState("");
+  const [newRewardLevel, setNewRewardLevel] = React.useState("");
+  const [newRewardText, setNewRewardText] = React.useState("");
+  const [newRewardType, setNewRewardType] = React.useState("other");
+  const [newRewardAmount, setNewRewardAmount] = React.useState("");
+
   // ---- Auth
   React.useEffect(()=>{
     return firebase.auth().onAuthStateChanged(u=>{
@@ -128,6 +138,19 @@ function App(){
       setHistoryReadyForSave(historyIsSafeToPersist);
       setBalance(typeof data.balance === "number" ? data.balance : 0);
 
+      // Загружаем данные боевого пропуска
+      if(data.battlePass){
+        setBattlePass(prev => ({
+          ...prev,
+          ...data.battlePass,
+          // Обеспечиваем наличие всех полей
+          tasks: data.battlePass.tasks || [],
+          rewards: data.battlePass.rewards || [],
+          completedTasks: data.battlePass.completedTasks || [],
+          claimedRewards: data.battlePass.claimedRewards || []
+        }));
+      }
+
     } else {
       setHistory([]);
       setBalance(0);
@@ -145,67 +168,12 @@ function App(){
   React.useEffect(()=>{
   if(!loaded || !user || !historyReadyForSave || !hydrated) return;
 db.collection("users").doc(user.uid).set(
-  { balance, history },
+  { balance, history, battlePass },
   { merge: true }
 )
       .catch(err=>console.error("Save error:", err));
-  },[balance, history, historyReadyForSave, loaded, user]);
+  },[balance, history, battlePass, historyReadyForSave, loaded, user]);
 
-React.useEffect(() => {
-  const btn = document.getElementById("battlePassAdmin");
-  const panel = document.getElementById("battlePassAdminPanel");
-  const addTaskBtn = document.getElementById("addTaskBtn");
-  const addRewardBtn = document.getElementById("addRewardBtn");
-  const resetBtn = document.getElementById("resetSeason");
-
-  if (!btn || !panel) return;
-
-  const togglePanel = () => {
-    panel.style.display = panel.style.display === "none" ? "block" : "none";
-  };
-
-  const addTask = () => {
-    const name = document.getElementById("newTaskName").value.trim();
-    const xp = document.getElementById("newTaskXP").value.trim();
-    if (!name || !xp) return alert("Введите название и XP");
-    const li = document.createElement("li");
-    li.textContent = `${name} — +${xp} XP`;
-    document.getElementById("taskList").appendChild(li);
-    document.getElementById("newTaskName").value = "";
-    document.getElementById("newTaskXP").value = "";
-  };
-
-  const addReward = () => {
-    const lvl = document.getElementById("newRewardLvl").value.trim();
-    const text = document.getElementById("newRewardText").value.trim();
-    if (!lvl || !text) return alert("Введите уровень и награду");
-    const li = document.createElement("li");
-    li.textContent = `Уровень ${lvl} — ${text}`;
-    document.getElementById("rewardList").appendChild(li);
-    document.getElementById("newRewardLvl").value = "";
-    document.getElementById("newRewardText").value = "";
-  };
-
-  const reset = () => {
-    if (confirm("Точно сбросить сезон?")) {
-      document.getElementById("taskList").innerHTML = "";
-      document.getElementById("rewardList").innerHTML = "";
-      alert("Боевой пропуск сброшен ✅");
-    }
-  };
-
-  btn.addEventListener("click", togglePanel);
-  addTaskBtn.addEventListener("click", addTask);
-  addRewardBtn.addEventListener("click", addReward);
-  resetBtn.addEventListener("click", reset);
-
-  return () => {
-    btn.removeEventListener("click", togglePanel);
-    addTaskBtn.removeEventListener("click", addTask);
-    addRewardBtn.removeEventListener("click", addReward);
-    resetBtn.removeEventListener("click", reset);
-  };
-}, []);
 
 
   
@@ -369,6 +337,91 @@ React.useEffect(() => {
         completeTask(task.id, task.xp || 100);
       }
     });
+  };
+
+  // ---- BP Admin функции
+  const addTask = () => {
+    if(!newTaskName.trim() || !newTaskXP) {
+      alert("Введите название и XP для задания");
+      return;
+    }
+
+    const task = {
+      id: Date.now().toString(),
+      name: newTaskName.trim(),
+      xp: Number(newTaskXP),
+      type: newTaskType,
+      target: newTaskTarget ? Number(newTaskTarget) : undefined
+    };
+
+    setBattlePass(prev => ({
+      ...prev,
+      tasks: [...prev.tasks, task]
+    }));
+
+    // Очистка формы
+    setNewTaskName("");
+    setNewTaskXP("");
+    setNewTaskTarget("");
+  };
+
+  const deleteTask = (taskId) => {
+    if(!confirm("Удалить это задание?")) return;
+
+    setBattlePass(prev => ({
+      ...prev,
+      tasks: prev.tasks.filter(t => t.id !== taskId)
+    }));
+  };
+
+  const addReward = () => {
+    if(!newRewardLevel || !newRewardText.trim()) {
+      alert("Введите уровень и описание награды");
+      return;
+    }
+
+    const reward = {
+      id: Date.now().toString(),
+      level: Number(newRewardLevel),
+      text: newRewardText.trim(),
+      type: newRewardType,
+      amount: newRewardType === 'money' && newRewardAmount ? Number(newRewardAmount) : undefined
+    };
+
+    setBattlePass(prev => ({
+      ...prev,
+      rewards: [...prev.rewards, reward].sort((a, b) => a.level - b.level)
+    }));
+
+    // Очистка формы
+    setNewRewardLevel("");
+    setNewRewardText("");
+    setNewRewardAmount("");
+  };
+
+  const deleteReward = (rewardId) => {
+    if(!confirm("Удалить эту награду?")) return;
+
+    setBattlePass(prev => ({
+      ...prev,
+      rewards: prev.rewards.filter(r => r.id !== rewardId)
+    }));
+  };
+
+  const resetSeason = () => {
+    if(!confirm("Точно сбросить сезон? Это удалит все задания, награды и прогресс!")) return;
+
+    setBattlePass(prev => ({
+      ...prev,
+      xp: 0,
+      level: 1,
+      tasks: [],
+      rewards: [],
+      completedTasks: [],
+      claimedRewards: []
+    }));
+
+    alert("✅ Боевой пропуск сброшен!");
   };
 
   // ---- App logic
@@ -654,44 +707,68 @@ React.useEffect(() => {
           })()}
 
                     {/* ==== Боевой пропуск ==== */}
-<div className="card battle-pass">
-  <h3 style={{ marginTop: 0 }}>🏆 Боевой пропуск сезона 1</h3>
-  <p className="muted">«Осенний апгрейд знаний»</p>
+          {(() => {
+            const progress = getCurrentLevelProgress();
+            return (
+              <div className="card battle-pass">
+                <h3 style={{ marginTop: 0 }}>🏆 Боевой пропуск сезона {battlePass.season}</h3>
+                <p className="muted">«{battlePass.seasonName}»</p>
 
-  <div className="xp-section">
-    <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
-      <div style={{ fontWeight: 600 }}>Уровень: 6 / 10</div>
-      <div style={{ fontWeight: 600, color: "#2196f3" }}>XP: 1350 / 2000</div>
-    </div>
-    <div className="progress-bar large">
-      <div className="progress-fill" style={{ width: "68%" }}></div>
-    </div>
-  </div>
+                <div className="xp-section">
+                  <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ fontWeight: 600 }}>Уровень: {battlePass.level} / {battlePass.maxLevel}</div>
+                    <div style={{ fontWeight: 600, color: "#2196f3" }}>XP: {progress.current} / {progress.needed}</div>
+                  </div>
+                  <div className="progress-bar large">
+                    <div className="progress-fill" style={{ width: `${progress.percentage}%` }}></div>
+                  </div>
+                </div>
 
-  <h4 style={{ marginTop: "16px" }}>🎯 Задания</h4>
-  <ul className="bp-tasks">
-    <li className="done">✅ Получи 3 пятёрки подряд — <b>+100 XP</b></li>
-    <li className="done">✅ Сделай 10 оценок за неделю — <b>+200 XP</b></li>
-    <li>🔲 Сохрани streak 5 дней — <b>+250 XP</b></li>
-  </ul>
+                <h4 style={{ marginTop: "16px" }}>🎯 Задания</h4>
+                {battlePass.tasks.length === 0 ? (
+                  <p className="muted">Задания пока не добавлены. Администратор может добавить их через админ-панель.</p>
+                ) : (
+                  <ul className="bp-tasks">
+                    {battlePass.tasks.map(task => {
+                      const isCompleted = battlePass.completedTasks.includes(task.id);
+                      return (
+                        <li key={task.id} className={isCompleted ? "done" : ""}>
+                          {isCompleted ? "✅" : "🔲"} {task.name} — <b>+{task.xp} XP</b>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
 
-  <h4 style={{ marginTop: "16px" }}>🎁 Награды</h4>
-  <div className="rewards-grid">
-    {[
-      { lvl: 1, reward: "+100 ₽" },
-      { lvl: 2, reward: "Стикер" },
-      { lvl: 3, reward: "+200 ₽" },
-      { lvl: 4, reward: "Бейдж «Отличник»" },
-      { lvl: 5, reward: "Бонус ×2 на день" },
-      { lvl: 10, reward: "💎 Супернаграда" }
-    ].map((r, i) => (
-      <div key={i} className={`reward ${r.lvl <= 6 ? "unlocked" : ""}`}>
-        <div className="lvl">Ур.{r.lvl}</div>
-        <div className="val">{r.reward}</div>
-      </div>
-    ))}
-  </div>
-</div>
+                <h4 style={{ marginTop: "16px" }}>🎁 Награды</h4>
+                {battlePass.rewards.length === 0 ? (
+                  <p className="muted">Награды пока не добавлены. Администратор может добавить их через админ-панель.</p>
+                ) : (
+                  <div className="rewards-grid">
+                    {battlePass.rewards.map(reward => {
+                      const isUnlocked = battlePass.level >= reward.level;
+                      const isClaimed = battlePass.claimedRewards.includes(reward.id);
+                      const canClaim = isUnlocked && !isClaimed;
+
+                      return (
+                        <div
+                          key={reward.id}
+                          className={`reward ${isUnlocked ? (isClaimed ? "claimed" : "unlocked") : "locked"}`}
+                          onClick={() => canClaim && claimReward(reward.id)}
+                          style={{ cursor: canClaim ? 'pointer' : 'default' }}
+                          title={canClaim ? 'Нажмите чтобы получить награду' : isClaimed ? 'Награда получена' : `Откроется на уровне ${reward.level}`}
+                        >
+                          <div className="lvl">Ур.{reward.level}</div>
+                          <div className="val">{reward.text}</div>
+                          {isClaimed && <div className="claimed-badge">✅</div>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           <div className="card history">
             <h3 style={{marginTop:0}}>История</h3>
@@ -715,46 +792,124 @@ React.useEffect(() => {
           </div>
 
 {/* ==== Админка боевого пропуска ==== */}
-{showBPAdmin && adminAccess && (
-  <div className="card battle-pass-admin">
-  <button className="close-admin-btn" title="Закрыть"
-        onClick={() => setShowBPAdmin(false)}>
-  <span className="material-icons">close</span>
-</button>
-    <h3>⚙️ Администрирование боевого пропуска</h3>
- 
+          {showBPAdmin && adminAccess && (
+            <div className="card battle-pass-admin">
+              <button className="close-admin-btn" title="Закрыть"
+                    onClick={() => setShowBPAdmin(false)}>
+                <span className="material-icons">close</span>
+              </button>
+              <h3>⚙️ Администрирование боевого пропуска</h3>
 
-    <div className="section">
-      <h4>🎯 Задания</h4>
-      <ul className="admin-list" id="taskList">
-        <li>✅ Получи 3 пятёрки подряд — <b>+100 XP</b></li>
-        <li>✅ Сделай 10 оценок за неделю — <b>+200 XP</b></li>
-      </ul>
-      <div className="row">
-        <input type="text" id="newTaskName" placeholder="Название задания" />
-        <input type="number" id="newTaskXP" placeholder="XP" style={{ width: "80px" }} />
-        <button id="addTaskBtn">Добавить</button>
-      </div>
-    </div>
+              <div className="section">
+                <h4>🎯 Задания</h4>
+                <ul className="admin-list">
+                  {battlePass.tasks.length === 0 ? (
+                    <li style={{color: '#999'}}>Заданий пока нет</li>
+                  ) : (
+                    battlePass.tasks.map(task => (
+                      <li key={task.id}>
+                        {task.name} — <b>+{task.xp} XP</b>
+                        <button className="text-btn" onClick={() => deleteTask(task.id)} style={{marginLeft: '8px'}}>
+                          <span className="material-icons" style={{fontSize: '16px'}}>delete</span>
+                        </button>
+                      </li>
+                    ))
+                  )}
+                </ul>
+                <div className="row" style={{gap: '8px', flexWrap: 'wrap'}}>
+                  <input
+                    type="text"
+                    placeholder="Название задания"
+                    value={newTaskName}
+                    onChange={e => setNewTaskName(e.target.value)}
+                    style={{flex: '1 1 200px'}}
+                  />
+                  <select
+                    value={newTaskType}
+                    onChange={e => setNewTaskType(e.target.value)}
+                    style={{width: '150px'}}
+                  >
+                    <option value="streak_fives">Серия пятёрок</option>
+                    <option value="total_grades_week">Оценок за неделю</option>
+                    <option value="average_score">Средний балл</option>
+                  </select>
+                  <input
+                    type="number"
+                    placeholder="Цель"
+                    value={newTaskTarget}
+                    onChange={e => setNewTaskTarget(e.target.value)}
+                    style={{width: '80px'}}
+                    title="Например: 3 для '3 пятёрки подряд', 10 для '10 оценок', 4.5 для среднего балла"
+                  />
+                  <input
+                    type="number"
+                    placeholder="XP"
+                    value={newTaskXP}
+                    onChange={e => setNewTaskXP(e.target.value)}
+                    style={{width: '80px'}}
+                  />
+                  <button onClick={addTask}>Добавить</button>
+                </div>
+              </div>
 
-    <div className="section">
-      <h4>🎁 Награды</h4>
-      <ul className="admin-list" id="rewardList">
-        <li>Уровень 1 — +100 ₽</li>
-        <li>Уровень 2 — Стикер</li>
-      </ul>
-      <div className="row">
-        <input type="number" id="newRewardLvl" placeholder="Уровень" style={{ width: "80px" }} />
-        <input type="text" id="newRewardText" placeholder="Награда" />
-        <button id="addRewardBtn">Добавить</button>
-      </div>
-    </div>
+              <div className="section">
+                <h4>🎁 Награды</h4>
+                <ul className="admin-list">
+                  {battlePass.rewards.length === 0 ? (
+                    <li style={{color: '#999'}}>Наград пока нет</li>
+                  ) : (
+                    battlePass.rewards.map(reward => (
+                      <li key={reward.id}>
+                        Уровень {reward.level} — {reward.text}
+                        {reward.type === 'money' && reward.amount && ` (${reward.amount}₽)`}
+                        <button className="text-btn" onClick={() => deleteReward(reward.id)} style={{marginLeft: '8px'}}>
+                          <span className="material-icons" style={{fontSize: '16px'}}>delete</span>
+                        </button>
+                      </li>
+                    ))
+                  )}
+                </ul>
+                <div className="row" style={{gap: '8px', flexWrap: 'wrap'}}>
+                  <input
+                    type="number"
+                    placeholder="Уровень"
+                    value={newRewardLevel}
+                    onChange={e => setNewRewardLevel(e.target.value)}
+                    style={{width: '80px'}}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Описание награды"
+                    value={newRewardText}
+                    onChange={e => setNewRewardText(e.target.value)}
+                    style={{flex: '1 1 150px'}}
+                  />
+                  <select
+                    value={newRewardType}
+                    onChange={e => setNewRewardType(e.target.value)}
+                    style={{width: '120px'}}
+                  >
+                    <option value="other">Не деньги</option>
+                    <option value="money">Деньги</option>
+                  </select>
+                  {newRewardType === 'money' && (
+                    <input
+                      type="number"
+                      placeholder="Сумма ₽"
+                      value={newRewardAmount}
+                      onChange={e => setNewRewardAmount(e.target.value)}
+                      style={{width: '100px'}}
+                    />
+                  )}
+                  <button onClick={addReward}>Добавить</button>
+                </div>
+              </div>
 
-    <div className="section" style={{ textAlign: "right", marginTop: "10px" }}>
-      <button id="resetSeason" className="danger-btn">Сбросить сезон</button>
-    </div>
-  </div>
-)}
+              <div className="section" style={{ textAlign: "right", marginTop: "10px" }}>
+                <button onClick={resetSeason} className="danger-btn">Сбросить сезон</button>
+              </div>
+            </div>
+          )}
 
               
         </React.Fragment>
