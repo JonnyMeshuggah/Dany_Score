@@ -473,7 +473,12 @@ React.useEffect(() => {
                     <div className="chart-container">
                       {[5, 4, 3, 2].map(grade => {
                         const count = stats[grade];
-                        const height = maxCount > 0 ? (count / maxCount) * 100 : 0;
+                        // Используем нелинейное масштабирование для лучшей визуализации
+                        // Минимум 30% для ненулевых значений, остальные 70% распределяем пропорционально
+                        const minHeight = 30;
+                        const maxHeight = 100;
+                        const range = maxHeight - minHeight;
+                        const height = count > 0 ? minHeight + (count / maxCount) * range : 0;
                         const gradeColors = {
                           5: '#4caf50',
                           4: '#2196f3',
