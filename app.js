@@ -1,5 +1,5 @@
 // ==== Версия приложения ====
-const APP_VERSION = "v1.0.8-debug";
+const APP_VERSION = "v1.1.0";
 
 // ==== Бизнес-логика наград ====
 const baseRewards = {5: 250, 4: 100, 3: -500, 2: -2000};
@@ -186,21 +186,19 @@ db.collection("users").doc(user.uid).set(
       .catch(err=>console.error("Save error:", err));
   },[balance, history, historyReadyForSave, loaded, user]);
 
-  // ---- Auto-save battlePass (только игровые изменения: XP, level, completedTasks, claimedRewards)
-  React.useEffect(()=>{
-  if(!loaded || !user || !hydrated) return;
-  // НЕ автосохраняем, если есть несохраненные изменения в админке
-  if(bpUnsavedChanges) return;
-
-  // Сохраняем игровой прогресс используя update с dot notation
-  db.collection("users").doc(user.uid).update({
-    'battlePass.xp': battlePass.xp,
-    'battlePass.level': battlePass.level,
-    'battlePass.completedTasks': battlePass.completedTasks,
-    'battlePass.claimedRewards': battlePass.claimedRewards
-  })
-      .catch(err=>console.error("BattlePass save error:", err));
-  },[battlePass.xp, battlePass.level, battlePass.completedTasks, battlePass.claimedRewards, loaded, user, hydrated, bpUnsavedChanges]);
+  // ---- Auto-save battlePass ОТКЛЮЧЕНО - вызывало Quota exceeded
+  // Игровой прогресс сохраняется вместе с настройками админки через кнопку "Сохранить"
+  // React.useEffect(()=>{
+  //   if(!loaded || !user || !hydrated) return;
+  //   if(bpUnsavedChanges) return;
+  //   db.collection("users").doc(user.uid).update({
+  //     'battlePass.xp': battlePass.xp,
+  //     'battlePass.level': battlePass.level,
+  //     'battlePass.completedTasks': battlePass.completedTasks,
+  //     'battlePass.claimedRewards': battlePass.claimedRewards
+  //   })
+  //       .catch(err=>console.error("BattlePass save error:", err));
+  // },[battlePass.xp, battlePass.level, battlePass.completedTasks, battlePass.claimedRewards, loaded, user, hydrated, bpUnsavedChanges]);
 
 
 
@@ -285,11 +283,27 @@ db.collection("users").doc(user.uid).set(
     const newLevel = getLevelFromXP(newXP);
     const oldLevel = battlePass.level;
 
-    setBattlePass(prev => ({
-      ...prev,
-      xp: newXP,
-      level: newLevel
-    }));
+    setBattlePass(prev => {
+      const updated = {
+        ...prev,
+        xp: newXP,
+        level: newLevel
+      };
+
+      // Автосохранение игрового прогресса
+      if(user && loaded){
+        db.collection("users").doc(user.uid).set({
+          battlePass: {
+            xp: newXP,
+            level: newLevel,
+            completedTasks: prev.completedTasks,
+            claimedRewards: prev.claimedRewards
+          }
+        }, { merge: true }).catch(err => console.error("Auto-save XP error:", err));
+      }
+
+      return updated;
+    });
 
     // Уведомление о повышении уровня
     if(newLevel > oldLevel){
@@ -301,10 +315,23 @@ db.collection("users").doc(user.uid).set(
   const completeTask = (taskId, xpReward) => {
     if(battlePass.completedTasks.includes(taskId)) return; // уже выполнено
 
-    setBattlePass(prev => ({
-      ...prev,
-      completedTasks: [...prev.completedTasks, taskId]
-    }));
+    setBattlePass(prev => {
+      const updated = {
+        ...prev,
+        completedTasks: [...prev.completedTasks, taskId]
+      };
+
+      // Автосохранение
+      if(user && loaded){
+        db.collection("users").doc(user.uid).set({
+          battlePass: {
+            completedTasks: updated.completedTasks
+          }
+        }, { merge: true }).catch(err => console.error("Auto-save task error:", err));
+      }
+
+      return updated;
+    });
 
     addXP(xpReward, `Выполнено задание`);
   };
@@ -320,10 +347,23 @@ db.collection("users").doc(user.uid).set(
       return;
     }
 
-    setBattlePass(prev => ({
-      ...prev,
-      claimedRewards: [...prev.claimedRewards, rewardId]
-    }));
+    setBattlePass(prev => {
+      const updated = {
+        ...prev,
+        claimedRewards: [...prev.claimedRewards, rewardId]
+      };
+
+      // Автосохранение
+      if(user && loaded){
+        db.collection("users").doc(user.uid).set({
+          battlePass: {
+            claimedRewards: updated.claimedRewards
+          }
+        }, { merge: true }).catch(err => console.error("Auto-save reward error:", err));
+      }
+
+      return updated;
+    });
 
     // Если награда денежная - добавляем на баланс
     if(reward.type === 'money' && reward.amount){
@@ -392,17 +432,25 @@ db.collection("users").doc(user.uid).set(
     if(!user) return;
 
     try {
+      // Сохраняем весь battlePass используя set с merge: true
+      // Это создаст поля если их нет, или обновит если они существуют
       const dataToSave = {
-        'battlePass.season': battlePass.season,
-        'battlePass.seasonName': battlePass.seasonName,
-        'battlePass.maxLevel': battlePass.maxLevel,
-        'battlePass.xpPerLevel': battlePass.xpPerLevel,
-        'battlePass.tasks': battlePass.tasks,
-        'battlePass.rewards': battlePass.rewards
+        battlePass: {
+          season: battlePass.season,
+          seasonName: battlePass.seasonName,
+          maxLevel: battlePass.maxLevel,
+          xpPerLevel: battlePass.xpPerLevel,
+          tasks: battlePass.tasks,
+          rewards: battlePass.rewards,
+          xp: battlePass.xp,
+          level: battlePass.level,
+          completedTasks: battlePass.completedTasks,
+          claimedRewards: battlePass.claimedRewards
+        }
       };
-      console.log("🔵 Сохраняем в Firestore:", dataToSave);
+      console.log("🔵 Сохраняем весь battlePass в Firestore:", dataToSave);
 
-      await db.collection("users").doc(user.uid).update(dataToSave);
+      await db.collection("users").doc(user.uid).set(dataToSave, { merge: true });
 
       console.log("✅ Сохранено успешно");
       setBpUnsavedChanges(false);
