@@ -1,5 +1,5 @@
 // ==== Версия приложения ====
-const APP_VERSION = "v1.0.5";
+const APP_VERSION = "v1.0.6";
 
 // ==== Бизнес-логика наград ====
 const baseRewards = {5: 250, 4: 100, 3: -500, 2: -2000};
@@ -189,16 +189,14 @@ db.collection("users").doc(user.uid).set(
   // НЕ автосохраняем, если есть несохраненные изменения в админке
   if(bpUnsavedChanges) return;
 
-  // Сохраняем только игровой прогресс
-  const gameProgress = {
-    xp: battlePass.xp,
-    level: battlePass.level,
-    completedTasks: battlePass.completedTasks,
-    claimedRewards: battlePass.claimedRewards
-  };
-
+  // Сохраняем игровой прогресс используя dot notation для точечного обновления
   db.collection("users").doc(user.uid).set(
-    { battlePass: gameProgress },
+    {
+      'battlePass.xp': battlePass.xp,
+      'battlePass.level': battlePass.level,
+      'battlePass.completedTasks': battlePass.completedTasks,
+      'battlePass.claimedRewards': battlePass.claimedRewards
+    },
     { merge: true }
   )
       .catch(err=>console.error("BattlePass save error:", err));
@@ -394,18 +392,16 @@ db.collection("users").doc(user.uid).set(
     if(!user) return;
 
     try {
-      // Сохраняем только настройки админки (не игровой прогресс)
-      const adminSettings = {
-        season: battlePass.season,
-        seasonName: battlePass.seasonName,
-        maxLevel: battlePass.maxLevel,
-        xpPerLevel: battlePass.xpPerLevel,
-        tasks: battlePass.tasks,
-        rewards: battlePass.rewards
-      };
-
+      // Сохраняем настройки админки используя dot notation для точечного обновления
       await db.collection("users").doc(user.uid).set(
-        { battlePass: adminSettings },
+        {
+          'battlePass.season': battlePass.season,
+          'battlePass.seasonName': battlePass.seasonName,
+          'battlePass.maxLevel': battlePass.maxLevel,
+          'battlePass.xpPerLevel': battlePass.xpPerLevel,
+          'battlePass.tasks': battlePass.tasks,
+          'battlePass.rewards': battlePass.rewards
+        },
         { merge: true }
       );
       setBpUnsavedChanges(false);
