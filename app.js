@@ -350,9 +350,13 @@ db.collection("users").doc(user.uid).set(
       id: Date.now().toString(),
       name: newTaskName.trim(),
       xp: Number(newTaskXP),
-      type: newTaskType,
-      target: newTaskTarget ? Number(newTaskTarget) : undefined
+      type: newTaskType
     };
+
+    // Добавляем target только если указан
+    if(newTaskTarget) {
+      task.target = Number(newTaskTarget);
+    }
 
     setBattlePass(prev => ({
       ...prev,
@@ -384,9 +388,13 @@ db.collection("users").doc(user.uid).set(
       id: Date.now().toString(),
       level: Number(newRewardLevel),
       text: newRewardText.trim(),
-      type: newRewardType,
-      amount: newRewardType === 'money' && newRewardAmount ? Number(newRewardAmount) : undefined
+      type: newRewardType
     };
+
+    // Добавляем amount только если это деньги и сумма указана
+    if(newRewardType === 'money' && newRewardAmount) {
+      reward.amount = Number(newRewardAmount);
+    }
 
     setBattlePass(prev => ({
       ...prev,
