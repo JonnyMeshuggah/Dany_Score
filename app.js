@@ -1,5 +1,5 @@
 // ==== Версия приложения ====
-const APP_VERSION = "v1.2.0";
+const APP_VERSION = "v1.2.1";
 
 // ==== Бизнес-логика наград ====
 const baseRewards = {5: 250, 4: 100, 3: -500, 2: -2000};
@@ -141,9 +141,6 @@ function App(){
 
       // Загружаем данные боевого пропуска
       if(data.battlePass){
-        console.log("🟢 Загружаем battlePass из Firestore:", data.battlePass);
-        console.log("  seasonName из базы:", data.battlePass.seasonName);
-
         setBattlePass(prev => ({
           ...prev,
           ...data.battlePass,
@@ -179,7 +176,6 @@ function App(){
     { merge: true }
   )
       .then(() => {
-        console.log("💾 История и баланс сохранены");
         setTimeout(() => setIsSaving(false), 500); // Даем время onSnapshot обработать
       })
       .catch(err => {
@@ -450,11 +446,9 @@ function App(){
           claimedRewards: battlePass.claimedRewards
         }
       };
-      console.log("🔵 Сохраняем весь battlePass в Firestore:", dataToSave);
 
       await db.collection("users").doc(user.uid).set(dataToSave, { merge: true });
 
-      console.log("✅ Сохранено успешно");
       setBpUnsavedChanges(false);
       alert("✅ Изменения боевого пропуска сохранены!");
     } catch(err) {
@@ -576,9 +570,6 @@ function App(){
 
     // серии по предмету
     const sameSubject = history.filter(h=>h.subject===selectedSubject);
-    console.log(`📊 История по предмету "${selectedSubject}":`, sameSubject.length, "записей");
-    console.log("  Последние оценки:", sameSubject.slice(-5).map(h => `${h.date}: ${h.grade}`));
-
     const lastTwo = sameSubject.slice(-2).map(e=>e.grade);
     if(grade===5){
       if(lastTwo.length>=2 && lastTwo[0]===5 && lastTwo[1]===5){
@@ -673,7 +664,6 @@ function App(){
   const exportBtn = document.getElementById('exportBtn');
   const importFile = document.getElementById('importFile');
     const bpBtn = document.getElementById('battlePassAdmin');
-    const clearHistoryBtn = document.getElementById('clearHistoryBtn');
 
   if(!burger || !sidebar || !close || !exportBtn || !importFile) return;
 
@@ -696,20 +686,6 @@ function App(){
   closeFn();
 };
 
-  const onClearHistory = () => {
-    if(!window.confirm("⚠️ ВНИМАНИЕ! Это удалит ВСЮ историю оценок и обнулит баланс. Продолжить?")){
-      return;
-    }
-    if(!window.confirm("Вы уверены? Это действие нельзя отменить!")){
-      return;
-    }
-    setHistory([]);
-    setBalance(0);
-    setHistoryReadyForSave(true);
-    closeFn();
-    alert("✅ История полностью очищена");
-  };
-
   // закрытие при клике вне панели
   const clickOutside = (e)=>{
     if (sidebar.classList.contains('open')
@@ -725,7 +701,6 @@ function App(){
   importFile.addEventListener('change', onImportChange);
   document.addEventListener('click', clickOutside);
   if (bpBtn) bpBtn.addEventListener('click', onBP);
-  if (clearHistoryBtn) clearHistoryBtn.addEventListener('click', onClearHistory);
 
   return ()=>{
     burger.removeEventListener('click', open);
@@ -733,7 +708,6 @@ function App(){
     exportBtn.removeEventListener('click', onExport);
     importFile.removeEventListener('change', onImportChange);
     document.removeEventListener('click', clickOutside);
-    if (clearHistoryBtn) clearHistoryBtn.removeEventListener('click', onClearHistory);
   if (bpBtn) bpBtn.removeEventListener('click', onBP);
   };
 },[history, user]); // зависимость нужна, чтобы экспорт видел актуальные данные
