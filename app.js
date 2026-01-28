@@ -71,7 +71,7 @@ function App(){
   // ---- Battle Pass State
   const [battlePass, setBattlePass] = React.useState({
     xp: 0,
-    level: 1,
+    level: 0,
     season: 1,
     seasonName: "Осенний апгрейд знаний",
     maxLevel: 10,
@@ -91,6 +91,7 @@ function App(){
   const [newRewardText, setNewRewardText] = React.useState("");
   const [newRewardType, setNewRewardType] = React.useState("other");
   const [newRewardAmount, setNewRewardAmount] = React.useState("");
+  const [bpUnsavedChanges, setBpUnsavedChanges] = React.useState(false);
 
   // ---- History Pagination State
   const [showAllHistory, setShowAllHistory] = React.useState(false);
@@ -152,6 +153,7 @@ function App(){
           completedTasks: data.battlePass.completedTasks || [],
           claimedRewards: data.battlePass.claimedRewards || []
         }));
+        setBpUnsavedChanges(false); // Сбрасываем флаг после загрузки
       }
 
     } else {
@@ -167,15 +169,25 @@ function App(){
     return ()=>unsub();
   },[user]);
 
-  // ---- Save
+  // ---- Save (автосохранение только баланса и истории)
   React.useEffect(()=>{
   if(!loaded || !user || !historyReadyForSave || !hydrated) return;
 db.collection("users").doc(user.uid).set(
-  { balance, history, battlePass },
+  { balance, history },
   { merge: true }
 )
       .catch(err=>console.error("Save error:", err));
-  },[balance, history, battlePass, historyReadyForSave, loaded, user]);
+  },[balance, history, historyReadyForSave, loaded, user]);
+
+  // ---- Auto-save battlePass (только игровые изменения: XP, level, completedTasks, claimedRewards)
+  React.useEffect(()=>{
+  if(!loaded || !user || !hydrated) return;
+db.collection("users").doc(user.uid).set(
+  { battlePass },
+  { merge: true }
+)
+      .catch(err=>console.error("BattlePass save error:", err));
+  },[battlePass.xp, battlePass.level, battlePass.completedTasks, battlePass.claimedRewards, loaded, user, hydrated]);
 
 
 
@@ -237,15 +249,15 @@ db.collection("users").doc(user.uid).set(
   };
 
   // ---- Battle Pass функции
-  // Расчёт уровня по XP
+  // Расчёт уровня по XP (уровень начинается с 0)
   const getLevelFromXP = (xp) => {
-    const level = Math.floor(xp / battlePass.xpPerLevel) + 1;
+    const level = Math.floor(xp / battlePass.xpPerLevel);
     return Math.min(level, battlePass.maxLevel);
   };
 
   // Расчёт XP для текущего уровня
   const getCurrentLevelProgress = () => {
-    const currentLevelXP = (battlePass.level - 1) * battlePass.xpPerLevel;
+    const currentLevelXP = battlePass.level * battlePass.xpPerLevel;
     const xpInCurrentLevel = battlePass.xp - currentLevelXP;
     return {
       current: xpInCurrentLevel,
@@ -363,6 +375,22 @@ db.collection("users").doc(user.uid).set(
   };
 
   // ---- BP Admin функции
+  const saveBattlePass = async () => {
+    if(!user) return;
+
+    try {
+      await db.collection("users").doc(user.uid).set(
+        { battlePass },
+        { merge: true }
+      );
+      setBpUnsavedChanges(false);
+      alert("✅ Изменения боевого пропуска сохранены!");
+    } catch(err) {
+      console.error("Ошибка сохранения:", err);
+      alert("❌ Ошибка при сохранении. Попробуйте еще раз.");
+    }
+  };
+
   const addTask = () => {
     if(!newTaskName.trim() || !newTaskXP) {
       alert("Введите название и XP для задания");
@@ -385,6 +413,7 @@ db.collection("users").doc(user.uid).set(
       ...prev,
       tasks: [...prev.tasks, task]
     }));
+    setBpUnsavedChanges(true);
 
     // Очистка формы
     setNewTaskName("");
@@ -399,6 +428,7 @@ db.collection("users").doc(user.uid).set(
       ...prev,
       tasks: prev.tasks.filter(t => t.id !== taskId)
     }));
+    setBpUnsavedChanges(true);
   };
 
   const addReward = () => {
@@ -423,6 +453,7 @@ db.collection("users").doc(user.uid).set(
       ...prev,
       rewards: [...prev.rewards, reward].sort((a, b) => a.level - b.level)
     }));
+    setBpUnsavedChanges(true);
 
     // Очистка формы
     setNewRewardLevel("");
@@ -437,6 +468,7 @@ db.collection("users").doc(user.uid).set(
       ...prev,
       rewards: prev.rewards.filter(r => r.id !== rewardId)
     }));
+    setBpUnsavedChanges(true);
   };
 
   const resetSeason = () => {
@@ -445,12 +477,13 @@ db.collection("users").doc(user.uid).set(
     setBattlePass(prev => ({
       ...prev,
       xp: 0,
-      level: 1,
+      level: 0,
       tasks: [],
       rewards: [],
       completedTasks: [],
       claimedRewards: []
     }));
+    setBpUnsavedChanges(true);
 
     alert("✅ Боевой пропуск сброшен!");
   };
@@ -978,7 +1011,27 @@ db.collection("users").doc(user.uid).set(
                 </div>
               </div>
 
-              <div className="section" style={{ textAlign: "right", marginTop: "10px" }}>
+              <div className="section" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: "20px", gap: '12px' }}>
+                <button
+                  onClick={saveBattlePass}
+                  style={{
+                    background: bpUnsavedChanges ? '#2196f3' : '#4caf50',
+                    flex: '1',
+                    position: 'relative'
+                  }}
+                >
+                  {bpUnsavedChanges ? (
+                    <React.Fragment>
+                      <span className="material-icons" style={{fontSize: '16px', verticalAlign: 'middle', marginRight: '4px'}}>save</span>
+                      Сохранить изменения ⚠️
+                    </React.Fragment>
+                  ) : (
+                    <React.Fragment>
+                      <span className="material-icons" style={{fontSize: '16px', verticalAlign: 'middle', marginRight: '4px'}}>check_circle</span>
+                      Сохранено
+                    </React.Fragment>
+                  )}
+                </button>
                 <button onClick={resetSeason} className="danger-btn">Сбросить сезон</button>
               </div>
             </div>
