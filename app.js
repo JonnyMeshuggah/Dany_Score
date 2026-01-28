@@ -142,8 +142,9 @@ function App(){
       setHistoryReadyForSave(historyIsSafeToPersist);
       setBalance(typeof data.balance === "number" ? data.balance : 0);
 
-      // Загружаем данные боевого пропуска
-      if(data.battlePass){
+      // Загружаем данные боевого пропуска ТОЛЬКО из серверных данных, не из кеша
+      // Это предотвращает затирание свежесохраненных настроек старыми данными из кеша
+      if(data.battlePass && !doc.metadata.fromCache){
         setBattlePass(prev => ({
           ...prev,
           ...data.battlePass,
