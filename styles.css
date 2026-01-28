@@ -559,3 +559,24 @@ input:focus, select:focus {
     font-size: 12px;
   }
 }
+
+/* ==== App Version ==== */
+.app-version {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  background: rgba(98, 0, 234, 0.1);
+  color: var(--md-primary);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  z-index: 1000;
+  user-select: none;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.app-version:hover {
+  opacity: 1;
+}

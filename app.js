@@ -1,3 +1,6 @@
+// ==== Версия приложения ====
+const APP_VERSION = "v1.0.5";
+
 // ==== Бизнес-логика наград ====
 const baseRewards = {5: 250, 4: 100, 3: -500, 2: -2000};
 const SUBJECTS = [
@@ -671,6 +674,9 @@ db.collection("users").doc(user.uid).set(
   // ---- UI
   return (
     <div className="stack container">
+     {/* Версия приложения */}
+     <div className="app-version">{APP_VERSION}</div>
+
      {!user ? (
   <div className="card auth-card" style={{textAlign: 'center'}}>
     <img src="logo.png" alt="Логотип" style={{width: '160px', marginBottom: '16px'}} />
