@@ -216,23 +216,23 @@ db.collection("users").doc(user.uid).set(
     return { stats, average, maxCount, totalGrades };
   };
 
-  // ---- History filtering (последние 3 дня)
+  // ---- History filtering (последние 5 дней)
   const getFilteredHistory = () => {
     if(showAllHistory || history.length === 0) return history;
 
     const now = new Date();
-    const threeDaysAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 3);
+    const fiveDaysAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 5);
 
     const recentHistory = history.filter(entry => {
       const parts = entry.date.split('.');
       if(parts.length === 3){
         const entryDate = new Date(parts[2], parts[1] - 1, parts[0]);
-        return entryDate >= threeDaysAgo;
+        return entryDate >= fiveDaysAgo;
       }
       return true; // Если дата некорректная, показываем запись
     });
 
-    // Если за 3 дня ничего нет, показываем первые 5 записей
+    // Если за 5 дней ничего нет, показываем первые 5 записей
     return recentHistory.length > 0 ? recentHistory : history.slice(0, 5);
   };
 
@@ -806,7 +806,7 @@ db.collection("users").doc(user.uid).set(
               <h3 style={{margin: 0}}>История</h3>
               {history.length > 0 && (
                 <span className="muted" style={{fontSize: '13px'}}>
-                  {showAllHistory ? `Всего: ${history.length}` : `Последние 3 дня`}
+                  {showAllHistory ? `Всего: ${history.length}` : `Последние 5 дней`}
                 </span>
               )}
             </div>
@@ -848,7 +848,7 @@ db.collection("users").doc(user.uid).set(
                         {showAllHistory ? (
                           <React.Fragment>
                             <span className="material-icons" style={{fontSize: '18px', verticalAlign: 'middle'}}>expand_less</span>
-                            Показать только последние 3 дня
+                            Показать только последние 5 дней
                           </React.Fragment>
                         ) : (
                           <React.Fragment>
