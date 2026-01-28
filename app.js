@@ -1,5 +1,5 @@
 // ==== Версия приложения ====
-const APP_VERSION = "v1.2.1";
+const APP_VERSION = "v1.2.2";
 
 // ==== Бизнес-логика наград ====
 const baseRewards = {5: 250, 4: 100, 3: -500, 2: -2000};
@@ -568,9 +568,9 @@ function App(){
     if(grade===5 && todayFives===1){ bonus=2; bonusDesc="Удвоение за 2 пятёрки за день"; }
     if(grade===5 && todayFives===2){ bonus=3; bonusDesc="Утроение за 3 пятёрки за день"; }
 
-    // серии по предмету
-    const sameSubject = history.filter(h=>h.subject===selectedSubject);
-    const lastTwo = sameSubject.slice(-2).map(e=>e.grade);
+    // серии по предмету (только сегодняшние записи!)
+    const todaySameSubject = history.filter(h => h.date === date && h.subject === selectedSubject);
+    const lastTwo = todaySameSubject.slice(-2).map(e=>e.grade);
     if(grade===5){
       if(lastTwo.length>=2 && lastTwo[0]===5 && lastTwo[1]===5){
         bonus=3.5; bonusDesc="Хет-трик 3 пятёрки подряд по предмету";
