@@ -383,10 +383,15 @@ db.collection("users").doc(user.uid).set(
     if(!user) return;
 
     try {
-      await db.collection("users").doc(user.uid).set(
-        { battlePass },
-        { merge: true }
-      );
+      // Используем update с dot notation для сохранения настроек админки
+      await db.collection("users").doc(user.uid).update({
+        'battlePass.season': battlePass.season,
+        'battlePass.seasonName': battlePass.seasonName,
+        'battlePass.maxLevel': battlePass.maxLevel,
+        'battlePass.xpPerLevel': battlePass.xpPerLevel,
+        'battlePass.tasks': battlePass.tasks,
+        'battlePass.rewards': battlePass.rewards
+      });
       setBpUnsavedChanges(false);
       alert("✅ Изменения боевого пропуска сохранены!");
     } catch(err) {
