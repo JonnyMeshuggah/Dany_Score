@@ -92,6 +92,9 @@ function App(){
   const [newRewardType, setNewRewardType] = React.useState("other");
   const [newRewardAmount, setNewRewardAmount] = React.useState("");
 
+  // ---- History Pagination State
+  const [showAllHistory, setShowAllHistory] = React.useState(false);
+
   // ---- Auth
   React.useEffect(()=>{
     return firebase.auth().onAuthStateChanged(u=>{
@@ -211,6 +214,26 @@ db.collection("users").doc(user.uid).set(
     const maxCount = Math.max(stats[2], stats[3], stats[4], stats[5], 1);
 
     return { stats, average, maxCount, totalGrades };
+  };
+
+  // ---- History filtering (последние 3 дня)
+  const getFilteredHistory = () => {
+    if(showAllHistory || history.length === 0) return history;
+
+    const now = new Date();
+    const threeDaysAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 3);
+
+    const recentHistory = history.filter(entry => {
+      const parts = entry.date.split('.');
+      if(parts.length === 3){
+        const entryDate = new Date(parts[2], parts[1] - 1, parts[0]);
+        return entryDate >= threeDaysAgo;
+      }
+      return true; // Если дата некорректная, показываем запись
+    });
+
+    // Если за 3 дня ничего нет, показываем первые 5 записей
+    return recentHistory.length > 0 ? recentHistory : history.slice(0, 5);
   };
 
   // ---- Battle Pass функции
@@ -779,24 +802,66 @@ db.collection("users").doc(user.uid).set(
           })()}
 
           <div className="card history">
-            <h3 style={{marginTop:0}}>История</h3>
+            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px'}}>
+              <h3 style={{margin: 0}}>История</h3>
+              {history.length > 0 && (
+                <span className="muted" style={{fontSize: '13px'}}>
+                  {showAllHistory ? `Всего: ${history.length}` : `Последние 3 дня`}
+                </span>
+              )}
+            </div>
             {history.length===0 && <p className="muted">Пока нет оценок.</p>}
-            {history.map((h,i)=>(
-              <div key={i} className="entry">
-                <div>
-                  <div><b>{h.date}</b> — {h.subject}: <b className={h.reward>=0?"":"negative"}>{h.grade}</b></div>
-                  {h.bonus && <div className="bonus">{h.bonus}</div>}
-                </div>
-                <div className="row" style={{alignItems:'center'}}>
-                  <div style={{minWidth:'90px', textAlign:'right', fontWeight:700}}>
-                    {h.reward>=0?`+${h.reward}`:`${h.reward}`} ₽
-                  </div>
-                  <button className="text-btn" title="Удалить" onClick={()=>deleteEntry(i)}>
-                    <span className="material-icons">delete</span>
-                  </button>
-                </div>
-              </div>
-            ))}
+            {(() => {
+              const filteredHistory = getFilteredHistory();
+              const hasMore = !showAllHistory && history.length > filteredHistory.length;
+
+              return (
+                <>
+                  {filteredHistory.map((h,i)=>{
+                    // Находим реальный индекс в полной истории для удаления
+                    const realIndex = history.findIndex(entry => entry === h);
+                    return (
+                      <div key={realIndex} className="entry">
+                        <div>
+                          <div><b>{h.date}</b> — {h.subject}: <b className={h.reward>=0?"":"negative"}>{h.grade}</b></div>
+                          {h.bonus && <div className="bonus">{h.bonus}</div>}
+                        </div>
+                        <div className="row" style={{alignItems:'center'}}>
+                          <div style={{minWidth:'90px', textAlign:'right', fontWeight:700}}>
+                            {h.reward>=0?`+${h.reward}`:`${h.reward}`} ₽
+                          </div>
+                          <button className="text-btn" title="Удалить" onClick={()=>deleteEntry(realIndex)}>
+                            <span className="material-icons">delete</span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {history.length > 0 && (hasMore || showAllHistory) && (
+                    <div style={{textAlign: 'center', marginTop: '16px'}}>
+                      <button
+                        className="text-btn"
+                        onClick={() => setShowAllHistory(!showAllHistory)}
+                        style={{fontSize: '14px'}}
+                      >
+                        {showAllHistory ? (
+                          <>
+                            <span className="material-icons" style={{fontSize: '18px', verticalAlign: 'middle'}}>expand_less</span>
+                            Показать только последние 3 дня
+                          </>
+                        ) : (
+                          <>
+                            <span className="material-icons" style={{fontSize: '18px', verticalAlign: 'middle'}}>expand_more</span>
+                            Показать всю историю ({history.length - filteredHistory.length} скрыто)
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
 
 {/* ==== Админка боевого пропуска ==== */}
