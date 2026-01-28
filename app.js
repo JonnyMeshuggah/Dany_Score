@@ -1,5 +1,5 @@
 // ==== Версия приложения ====
-const APP_VERSION = "v1.1.0";
+const APP_VERSION = "v1.1.1";
 
 // ==== Бизнес-логика наград ====
 const baseRewards = {5: 250, 4: 100, 3: -500, 2: -2000};
@@ -111,19 +111,9 @@ function App(){
   React.useEffect(()=>{
     if(!user) return;
   const unsub = db.collection("users").doc(user.uid).onSnapshot(
-  { includeMetadataChanges: true },
   (doc) => {
-
-    // ❗ если это кэш и документа нет — НИЧЕГО НЕ ДЕЛАЕМ
-    if (doc.metadata.fromCache && !doc.exists) {
-      setHistoryReadyForSave(false);
-      return;
-    }
-
-    // серверные данные получены
-    if (!doc.metadata.fromCache) {
-      setHydrated(true);
-    }
+    // Получены данные с сервера
+    setHydrated(true);
 
     if (doc.exists) {
       const data = doc.data();
@@ -145,9 +135,8 @@ function App(){
       setHistoryReadyForSave(historyIsSafeToPersist);
       setBalance(typeof data.balance === "number" ? data.balance : 0);
 
-      // Загружаем данные боевого пропуска ТОЛЬКО из серверных данных, не из кеша
-      // Это предотвращает затирание свежесохраненных настроек старыми данными из кеша
-      if(data.battlePass && !doc.metadata.fromCache){
+      // Загружаем данные боевого пропуска
+      if(data.battlePass){
         console.log("🟢 Загружаем battlePass из Firestore:", data.battlePass);
         console.log("  seasonName из базы:", data.battlePass.seasonName);
 
