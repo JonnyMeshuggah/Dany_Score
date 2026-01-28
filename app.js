@@ -182,10 +182,14 @@ db.collection("users").doc(user.uid).set(
   // ---- Auto-save battlePass (только игровые изменения: XP, level, completedTasks, claimedRewards)
   React.useEffect(()=>{
   if(!loaded || !user || !hydrated) return;
-db.collection("users").doc(user.uid).set(
-  { battlePass },
-  { merge: true }
-)
+
+  // Используем update с точечной нотацией для сохранения только игровых полей
+  db.collection("users").doc(user.uid).update({
+    'battlePass.xp': battlePass.xp,
+    'battlePass.level': battlePass.level,
+    'battlePass.completedTasks': battlePass.completedTasks,
+    'battlePass.claimedRewards': battlePass.claimedRewards
+  })
       .catch(err=>console.error("BattlePass save error:", err));
   },[battlePass.xp, battlePass.level, battlePass.completedTasks, battlePass.claimedRewards, loaded, user, hydrated]);
 
