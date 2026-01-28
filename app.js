@@ -210,6 +210,27 @@ React.useEffect(() => {
   };
   const logout = async ()=>{ await firebase.auth().signOut(); };
 
+  // ---- Statistics calculation
+  const calculateStats = ()=>{
+    const stats = {2: 0, 3: 0, 4: 0, 5: 0};
+    let totalGrades = 0;
+    let totalSum = 0;
+
+    history.forEach(entry => {
+      const g = entry.grade;
+      if(g === 2 || g === 3 || g === 4 || g === 5){
+        stats[g]++;
+        totalGrades++;
+        totalSum += g;
+      }
+    });
+
+    const average = totalGrades > 0 ? (totalSum / totalGrades).toFixed(2) : 0;
+    const maxCount = Math.max(stats[2], stats[3], stats[4], stats[5], 1);
+
+    return { stats, average, maxCount, totalGrades };
+  };
+
   // ---- App logic
   const addGrade = ()=>{
     if(!user) return alert("Сначала войдите в аккаунт");
@@ -423,6 +444,57 @@ React.useEffect(() => {
               </div>
             </div>
           </div>
+
+          {/* ==== Статистика оценок ==== */}
+          {(() => {
+            const { stats, average, maxCount, totalGrades } = calculateStats();
+            return (
+              <div className="card stats-card">
+                <h3 style={{marginTop: 0, display: 'flex', alignItems: 'center', gap: '8px'}}>
+                  <span className="material-icons" style={{color:'var(--md-primary)'}}>bar_chart</span>
+                  Статистика оценок
+                </h3>
+                {totalGrades === 0 ? (
+                  <p className="muted">Пока нет оценок для отображения статистики</p>
+                ) : (
+                  <React.Fragment>
+                    <div className="stats-summary">
+                      <div className="stat-item">
+                        <div className="stat-label">Всего оценок</div>
+                        <div className="stat-value">{totalGrades}</div>
+                      </div>
+                      <div className="stat-item">
+                        <div className="stat-label">Средний балл</div>
+                        <div className="stat-value" style={{color: average >= 4.5 ? '#4caf50' : average >= 4 ? '#2196f3' : average >= 3.5 ? '#ff9800' : '#f44336'}}>
+                          {average}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="chart-container">
+                      {[5, 4, 3, 2].map(grade => {
+                        const count = stats[grade];
+                        const height = maxCount > 0 ? (count / maxCount) * 100 : 0;
+                        const gradeColors = {
+                          5: '#4caf50',
+                          4: '#2196f3',
+                          3: '#ff9800',
+                          2: '#f44336'
+                        };
+                        return (
+                          <div key={grade} className="chart-bar">
+                            <div className="bar-value">{count}</div>
+                            <div className="bar-column" style={{height: `${height}%`, backgroundColor: gradeColors[grade]}}></div>
+                            <div className="bar-label">Оценка {grade}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </React.Fragment>
+                )}
+              </div>
+            );
+          })()}
+
                     {/* ==== Боевой пропуск ==== */}
 <div className="card battle-pass">
   <h3 style={{ marginTop: 0 }}>🏆 Боевой пропуск сезона 1</h3>
