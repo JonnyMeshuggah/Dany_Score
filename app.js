@@ -1,5 +1,5 @@
 // ==== Версия приложения ====
-const APP_VERSION = "v1.0.6";
+const APP_VERSION = "v1.0.7";
 
 // ==== Бизнес-логика наград ====
 const baseRewards = {5: 250, 4: 100, 3: -500, 2: -2000};
@@ -189,16 +189,13 @@ db.collection("users").doc(user.uid).set(
   // НЕ автосохраняем, если есть несохраненные изменения в админке
   if(bpUnsavedChanges) return;
 
-  // Сохраняем игровой прогресс используя dot notation для точечного обновления
-  db.collection("users").doc(user.uid).set(
-    {
-      'battlePass.xp': battlePass.xp,
-      'battlePass.level': battlePass.level,
-      'battlePass.completedTasks': battlePass.completedTasks,
-      'battlePass.claimedRewards': battlePass.claimedRewards
-    },
-    { merge: true }
-  )
+  // Сохраняем игровой прогресс используя update с dot notation
+  db.collection("users").doc(user.uid).update({
+    'battlePass.xp': battlePass.xp,
+    'battlePass.level': battlePass.level,
+    'battlePass.completedTasks': battlePass.completedTasks,
+    'battlePass.claimedRewards': battlePass.claimedRewards
+  })
       .catch(err=>console.error("BattlePass save error:", err));
   },[battlePass.xp, battlePass.level, battlePass.completedTasks, battlePass.claimedRewards, loaded, user, hydrated, bpUnsavedChanges]);
 
@@ -392,18 +389,15 @@ db.collection("users").doc(user.uid).set(
     if(!user) return;
 
     try {
-      // Сохраняем настройки админки используя dot notation для точечного обновления
-      await db.collection("users").doc(user.uid).set(
-        {
-          'battlePass.season': battlePass.season,
-          'battlePass.seasonName': battlePass.seasonName,
-          'battlePass.maxLevel': battlePass.maxLevel,
-          'battlePass.xpPerLevel': battlePass.xpPerLevel,
-          'battlePass.tasks': battlePass.tasks,
-          'battlePass.rewards': battlePass.rewards
-        },
-        { merge: true }
-      );
+      // Сохраняем настройки админки используя update с dot notation
+      await db.collection("users").doc(user.uid).update({
+        'battlePass.season': battlePass.season,
+        'battlePass.seasonName': battlePass.seasonName,
+        'battlePass.maxLevel': battlePass.maxLevel,
+        'battlePass.xpPerLevel': battlePass.xpPerLevel,
+        'battlePass.tasks': battlePass.tasks,
+        'battlePass.rewards': battlePass.rewards
+      });
       setBpUnsavedChanges(false);
       alert("✅ Изменения боевого пропуска сохранены!");
     } catch(err) {
