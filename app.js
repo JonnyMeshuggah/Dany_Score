@@ -473,12 +473,21 @@ React.useEffect(() => {
                     <div className="chart-container">
                       {[5, 4, 3, 2].map(grade => {
                         const count = stats[grade];
-                        // Используем нелинейное масштабирование для лучшей визуализации
-                        // Минимум 30% для ненулевых значений, остальные 70% распределяем пропорционально
-                        const minHeight = 30;
-                        const maxHeight = 100;
-                        const range = maxHeight - minHeight;
-                        const height = count > 0 ? minHeight + (count / maxCount) * range : 0;
+                        // Используем масштабирование с минимальной высотой в пикселях
+                        const containerHeight = 250; // должна соответствовать CSS
+                        const minHeightPx = 80; // минимальная высота для ненулевых значений
+                        const maxHeightPx = containerHeight - 20; // оставляем отступ
+
+                        let heightPx;
+                        if (count === 0) {
+                          heightPx = 0;
+                        } else if (count === maxCount) {
+                          heightPx = maxHeightPx;
+                        } else {
+                          const ratio = count / maxCount;
+                          heightPx = minHeightPx + (maxHeightPx - minHeightPx) * ratio;
+                        }
+
                         const gradeColors = {
                           5: '#4caf50',
                           4: '#2196f3',
@@ -488,7 +497,7 @@ React.useEffect(() => {
                         return (
                           <div key={grade} className="chart-bar">
                             <div className="bar-value">{count}</div>
-                            <div className="bar-column" style={{height: `${height}%`, backgroundColor: gradeColors[grade]}}></div>
+                            <div className="bar-column" style={{height: `${heightPx}px`, backgroundColor: gradeColors[grade]}}></div>
                             <div className="bar-label">Оценка {grade}</div>
                           </div>
                         );
