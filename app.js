@@ -556,6 +556,40 @@ function App(){
   };
 
   // ---- App logic
+  const recalculateHistory = (entries) => {
+    const sorted = [...entries].sort((a,b) => {
+      const [da,ma,ya] = a.date.split('.'), [db,mb,yb] = b.date.split('.');
+      const diff = new Date(ya,ma-1,da) - new Date(yb,mb-1,db);
+      return diff !== 0 ? diff : (parseInt(a.id)||0) - (parseInt(b.id)||0);
+    });
+    const result = [];
+    for (const entry of sorted) {
+      if (typeof entry.grade !== 'number') { result.push(entry); continue; }
+      let reward = baseRewards[entry.grade] || 0;
+      let bonus = 1, bonusDesc = "";
+      const dayGrades = result.filter(h => h.date === entry.date && typeof h.grade === 'number');
+      const dayFives = dayGrades.filter(h => h.grade === 5).length;
+      if(entry.grade===5 && dayFives===1){ bonus=2; bonusDesc="Удвоение за 2 пятёрки за день"; }
+      if(entry.grade===5 && dayFives===2){ bonus=3; bonusDesc="Утроение за 3 пятёрки за день"; }
+      const daySameSubject = result.filter(h => h.date === entry.date && h.subject === entry.subject && typeof h.grade === 'number');
+      const lastTwo = daySameSubject.slice(-2).map(e => e.grade);
+      if(entry.grade===5){
+        if(lastTwo.length>=2 && lastTwo[0]===5 && lastTwo[1]===5){
+          bonus=3.5; bonusDesc="Хет-трик 3 пятёрки подряд по предмету";
+        }else if(lastTwo.length>=1 && lastTwo[lastTwo.length-1]===5){
+          bonus=2.5; bonusDesc="Бонус 2.5 за 2 подряд по предмету";
+        }
+      }
+      result.push({...entry, reward: reward * bonus, bonus: bonusDesc});
+    }
+    result.sort((a,b) => {
+      const [da,ma,ya] = a.date.split('.'), [db,mb,yb] = b.date.split('.');
+      const diff = new Date(yb,mb-1,db) - new Date(ya,ma-1,da);
+      return diff !== 0 ? diff : (parseInt(b.id)||0) - (parseInt(a.id)||0);
+    });
+    return result;
+  };
+
   const addGrade = ()=>{
     if(!user) return alert("Сначала войдите в аккаунт");
     const [y, m, d] = gradeDate.split('-');
@@ -571,12 +605,13 @@ function App(){
     if(grade===5 && todayFives===2){ bonus=3; bonusDesc="Утроение за 3 пятёрки за день"; }
 
     // серии по предмету (только сегодняшние записи!)
-    const todaySameSubject = history.filter(h => h.date === date && h.subject === selectedSubject);
+    const todaySameSubject = history.filter(h => h.date === date && h.subject === selectedSubject)
+      .sort((a,b) => (parseInt(a.id)||0) - (parseInt(b.id)||0));
     const lastTwo = todaySameSubject.slice(-2).map(e=>e.grade);
     if(grade===5){
       if(lastTwo.length>=2 && lastTwo[0]===5 && lastTwo[1]===5){
         bonus=3.5; bonusDesc="Хет-трик 3 пятёрки подряд по предмету";
-      }else if(lastTwo.length>=1 && lastTwo[0]===5){
+      }else if(lastTwo.length>=1 && lastTwo[lastTwo.length-1]===5){
         bonus=2.5; bonusDesc="Бонус 2.5 за 2 подряд по предмету";
       }
     }
@@ -584,7 +619,12 @@ function App(){
     const total = reward * bonus;
     setBalance(balance + total);
     setHistoryReadyForSave(true);
-    const updatedHistory = [{date, subject:selectedSubject, grade, reward: total, bonus: bonusDesc}, ...history];
+    const newEntry = {id: Date.now().toString(), date, subject:selectedSubject, grade, reward: total, bonus: bonusDesc};
+    const updatedHistory = [newEntry, ...history].sort((a,b) => {
+      const [da,ma,ya] = a.date.split('.'), [db,mb,yb] = b.date.split('.');
+      const diff = new Date(yb,mb-1,db) - new Date(ya,ma-1,da);
+      return diff !== 0 ? diff : (parseInt(b.id)||0) - (parseInt(a.id)||0);
+    });
     setHistory(updatedHistory);
 
     // Проверяем задания боевого пропуска
@@ -592,11 +632,12 @@ function App(){
   };
 
   const deleteEntry = (i)=>{
-    const e = history[i];
-    setBalance(balance - e.reward);
     const arr = [...history]; arr.splice(i,1);
+    const recalculated = recalculateHistory(arr);
+    const newBalance = recalculated.reduce((sum, e) => sum + (typeof e.reward === 'number' ? e.reward : 0), 0);
+    setBalance(newBalance);
     setHistoryReadyForSave(true);
-    setHistory(arr);
+    setHistory(recalculated);
   };
 
   const cashOut = ()=>{
