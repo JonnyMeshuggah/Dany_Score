@@ -97,6 +97,7 @@ function App(){
   const [newRewardType, setNewRewardType] = React.useState("other");
   const [newRewardAmount, setNewRewardAmount] = React.useState("");
   const [bpUnsavedChanges, setBpUnsavedChanges] = React.useState(false);
+  const [adminBonusAmount, setAdminBonusAmount] = React.useState("");
 
   // ---- History Pagination State
   const [showAllHistory, setShowAllHistory] = React.useState(false);
@@ -536,6 +537,30 @@ function App(){
       rewards: prev.rewards.filter(r => r.id !== rewardId)
     }));
     setBpUnsavedChanges(true);
+  };
+
+  const applyAdminBonus = () => {
+    const amount = Number(adminBonusAmount);
+    if(!amount || amount <= 0) return alert("Введите корректную сумму (больше 0)");
+    const date = new Date().toLocaleDateString("ru-RU");
+    const newEntry = {
+      id: Date.now().toString(),
+      date,
+      subject: "🎁 Бонус от администратора",
+      grade: "—",
+      reward: amount,
+      bonus: ""
+    };
+    setBalance(balance + amount);
+    setHistoryReadyForSave(true);
+    const updatedHistory = [newEntry, ...history].sort((a,b) => {
+      const [da,ma,ya] = a.date.split('.'), [db,mb,yb] = b.date.split('.');
+      const diff = new Date(yb,mb-1,db) - new Date(ya,ma-1,da);
+      return diff !== 0 ? diff : (parseInt(b.id)||0) - (parseInt(a.id)||0);
+    });
+    setHistory(updatedHistory);
+    setAdminBonusAmount("");
+    alert(`✅ Начислено ${amount} ₽`);
   };
 
   const resetSeason = () => {
@@ -1138,6 +1163,27 @@ function App(){
                     />
                   )}
                   <button onClick={addReward}>Добавить</button>
+                </div>
+              </div>
+
+              <div className="section">
+                <h4>💰 Начислить деньги</h4>
+                <div className="row" style={{gap: '8px', alignItems: 'center'}}>
+                  <input
+                    type="number"
+                    placeholder="Сумма ₽"
+                    value={adminBonusAmount}
+                    onChange={e => setAdminBonusAmount(e.target.value)}
+                    style={{width: '120px'}}
+                    min="1"
+                  />
+                  <button
+                    onClick={applyAdminBonus}
+                    disabled={!adminBonusAmount || Number(adminBonusAmount) <= 0}
+                    style={{opacity: (!adminBonusAmount || Number(adminBonusAmount) <= 0) ? 0.5 : 1}}
+                  >
+                    Начислить
+                  </button>
                 </div>
               </div>
 
