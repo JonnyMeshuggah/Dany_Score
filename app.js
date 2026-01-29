@@ -56,6 +56,7 @@ function App(){
   const [subjects] = React.useState(SUBJECTS);
   const [selectedSubject, setSelectedSubject] = React.useState(subjects[0]);
   const [grade, setGrade] = React.useState(5);
+  const [gradeDate, setGradeDate] = React.useState(new Date().toISOString().split('T')[0]);
   const [cashOutAmount, setCashOutAmount] = React.useState("");
   const [showBPAdmin, setShowBPAdmin] = React.useState(false);
   const [adminAccess, setAdminAccess] = React.useState(false);
@@ -557,7 +558,8 @@ function App(){
   // ---- App logic
   const addGrade = ()=>{
     if(!user) return alert("Сначала войдите в аккаунт");
-    const date = new Date().toLocaleDateString("ru-RU");
+    const [y, m, d] = gradeDate.split('-');
+    const date = `${d}.${m}.${y}`;
     let reward = baseRewards[grade] || 0;
     let bonus = 1;
     let bonusDesc = "";
@@ -755,6 +757,7 @@ function App(){
               <select value={grade} onChange={e=>setGrade(Number(e.target.value))}>
                 {[5,4,3,2].map(g=><option key={g} value={g}>{g}</option>)}
               </select>
+              <input type="date" value={gradeDate} onChange={e=>setGradeDate(e.target.value)} max={new Date().toISOString().split('T')[0]} />
               <button onClick={addGrade}>
                 <span className="material-icons" style={{verticalAlign:'middle',marginRight:'6px'}}>add</span>
                 Добавить
