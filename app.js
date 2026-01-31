@@ -874,7 +874,7 @@ function App(){
               <span className="material-icons" style={{color:'var(--md-primary)'}}>military_tech</span>
               Команда Героев
             </h3>
-            <div style={{display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center'}}>
+            <div style={{display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center'}}>
               {[1, 2, 3, 4, 5].map(num => {
                 const isActivated = battlePass.badges && battlePass.badges.includes(num);
                 return (
@@ -883,6 +883,10 @@ function App(){
                     src={isActivated ? `badges/${num}.png` : `badges/${num}G.png`}
                     alt={`Бейдж ${num}`}
                     style={{
+                      flex: '1 1 0',
+                      minWidth: '50px',
+                      maxWidth: '160px',
+                      height: 'auto',
                       transition: 'all 0.3s ease'
                     }}
                   />
