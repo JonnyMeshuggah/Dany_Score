@@ -539,9 +539,11 @@ input:focus, select:focus {
 /* ==== Mobile Adaptation ==== */
 @media (max-width: 480px) {
   .chart-container {
-    height: 180px;
+    height: auto;
+    min-height: 180px;
     gap: 8px;
     padding: 12px 5px 8px;
+    overflow: visible;
   }
 
   .stat-item {
@@ -560,7 +562,7 @@ input:focus, select:focus {
   }
 
   .bar-column {
-    max-height: 140px;
+    max-height: 120px;
   }
 
   .bar-label {
