@@ -381,6 +381,70 @@ input:focus, select:focus {
   transition: width 0.5s ease;
 }
 
+/* ==== Energy Blade Progress Bar ==== */
+.energy-blade-container {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-top: 10px;
+  width: 100%;
+}
+
+.energy-blade-handle {
+  width: 18px;
+  height: 28px;
+  background: linear-gradient(180deg, #3a3a3a 0%, #1a1a1a 50%, #2a2a2a 100%);
+  border-radius: 4px 0 0 4px;
+  border: 1px solid #555;
+  border-right: none;
+  flex-shrink: 0;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -1px 0 rgba(0,0,0,0.3);
+}
+
+.energy-blade-track {
+  flex: 1;
+  height: 16px;
+  background: linear-gradient(180deg, #1a1a1a 0%, #0d0d0d 50%, #1a1a1a 100%);
+  border-radius: 0 8px 8px 0;
+  border: 1px solid #333;
+  border-left: none;
+  overflow: hidden;
+  position: relative;
+}
+
+.energy-blade-fill {
+  height: 100%;
+  background: linear-gradient(180deg,
+    #00ffff 0%,
+    #00d4ff 25%,
+    #00b8ff 50%,
+    #00d4ff 75%,
+    #00ffff 100%
+  );
+  border-radius: 0 6px 6px 0;
+  box-shadow:
+    0 0 10px #00ffff,
+    0 0 20px rgba(0, 255, 255, 0.6),
+    0 0 30px rgba(0, 255, 255, 0.4),
+    inset 0 0 8px rgba(255, 255, 255, 0.4);
+  transition: width 0.5s ease;
+  position: relative;
+}
+
+.energy-blade-fill::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  right: 4px;
+  height: 4px;
+  background: linear-gradient(90deg,
+    rgba(255,255,255,0.6) 0%,
+    rgba(255,255,255,0.2) 100%
+  );
+  border-radius: 2px;
+}
+
 .battle-pass-admin {
   background: var(--md-surface);
 }

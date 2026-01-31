@@ -972,8 +972,11 @@ function App(){
                     <div style={{ fontWeight: 600 }}>Уровень: {battlePass.level} / {battlePass.maxLevel}</div>
                     <div style={{ fontWeight: 600, color: "#2196f3" }}>XP: {progress.current} / {progress.needed}</div>
                   </div>
-                  <div className="progress-bar large">
-                    <div className="progress-fill" style={{ width: `${progress.percentage}%` }}></div>
+                  <div className="energy-blade-container">
+                    <div className="energy-blade-handle"></div>
+                    <div className="energy-blade-track">
+                      <div className="energy-blade-fill" style={{ width: `${progress.percentage}%` }}></div>
+                    </div>
                   </div>
                 </div>
 
