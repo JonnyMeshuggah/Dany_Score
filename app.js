@@ -880,7 +880,7 @@ function App(){
                 return (
                   <img
                     key={num}
-                    src={isActivated ? `${num}.png` : `${num}G.png`}
+                    src={isActivated ? `badges/${num}.png` : `badges/${num}G.png`}
                     alt={`Бейдж ${num}`}
                     style={{
                       width: '60px',
