@@ -84,7 +84,8 @@ function App(){
     tasks: [],
     rewards: [],
     completedTasks: [], // массив ID выполненных заданий
-    claimedRewards: [] // массив ID полученных наград
+    claimedRewards: [], // массив ID полученных наград
+    badges: [] // массив номеров активированных бейджей (1-5)
   });
 
   // ---- BP Admin State
@@ -96,6 +97,7 @@ function App(){
   const [newRewardText, setNewRewardText] = React.useState("");
   const [newRewardType, setNewRewardType] = React.useState("other");
   const [newRewardAmount, setNewRewardAmount] = React.useState("");
+  const [newRewardBadgeNumber, setNewRewardBadgeNumber] = React.useState("1");
   const [bpUnsavedChanges, setBpUnsavedChanges] = React.useState(false);
   const [adminBonusAmount, setAdminBonusAmount] = React.useState("");
 
@@ -150,7 +152,8 @@ function App(){
           tasks: data.battlePass.tasks || [],
           rewards: data.battlePass.rewards || [],
           completedTasks: data.battlePass.completedTasks || [],
-          claimedRewards: data.battlePass.claimedRewards || []
+          claimedRewards: data.battlePass.claimedRewards || [],
+          badges: data.battlePass.badges || []
         }));
         setBpUnsavedChanges(false); // Сбрасываем флаг после загрузки
       }
@@ -353,13 +356,24 @@ function App(){
         claimedRewards: [...prev.claimedRewards, rewardId]
       };
 
+      // Если награда - бейдж, добавляем его в список активированных
+      if(reward.type === 'badge' && reward.badgeNumber) {
+        if(!prev.badges.includes(reward.badgeNumber)) {
+          updated.badges = [...(prev.badges || []), reward.badgeNumber];
+        }
+      }
+
       // Автосохранение
       if(user && loaded){
-        db.collection("users").doc(user.uid).set({
+        const saveData = {
           battlePass: {
             claimedRewards: updated.claimedRewards
           }
-        }, { merge: true }).catch(err => console.error("Auto-save reward error:", err));
+        };
+        if(updated.badges) {
+          saveData.battlePass.badges = updated.badges;
+        }
+        db.collection("users").doc(user.uid).set(saveData, { merge: true }).catch(err => console.error("Auto-save reward error:", err));
       }
 
       return updated;
@@ -377,6 +391,8 @@ function App(){
         bonus: reward.text
       }, ...history]);
       alert(`✅ ${reward.text} зачислено на баланс!`);
+    } else if(reward.type === 'badge') {
+      alert(`✅ Бейдж "${reward.text}" активирован!`);
     } else {
       alert(`✅ Награда "${reward.text}" отмечена как полученная!`);
     }
@@ -445,7 +461,8 @@ function App(){
           xp: battlePass.xp,
           level: battlePass.level,
           completedTasks: battlePass.completedTasks,
-          claimedRewards: battlePass.claimedRewards
+          claimedRewards: battlePass.claimedRewards,
+          badges: battlePass.badges
         }
       };
 
@@ -517,6 +534,11 @@ function App(){
       reward.amount = Number(newRewardAmount);
     }
 
+    // Добавляем badgeNumber если это бейдж
+    if(newRewardType === 'badge') {
+      reward.badgeNumber = Number(newRewardBadgeNumber);
+    }
+
     setBattlePass(prev => ({
       ...prev,
       rewards: [...prev.rewards, reward].sort((a, b) => a.level - b.level)
@@ -527,6 +549,7 @@ function App(){
     setNewRewardLevel("");
     setNewRewardText("");
     setNewRewardAmount("");
+    setNewRewardBadgeNumber("1");
   };
 
   const deleteReward = (rewardId) => {
@@ -573,7 +596,8 @@ function App(){
       tasks: [],
       rewards: [],
       completedTasks: [],
-      claimedRewards: []
+      claimedRewards: [],
+      badges: []
     }));
     setBpUnsavedChanges(true);
 
@@ -841,6 +865,32 @@ function App(){
                   Вывести
                 </button>
               </div>
+            </div>
+          </div>
+
+          {/* ==== Команда Героев (Бейджи) ==== */}
+          <div className="card">
+            <h3 style={{marginTop: 0, display: 'flex', alignItems: 'center', gap: '8px'}}>
+              <span className="material-icons" style={{color:'var(--md-primary)'}}>military_tech</span>
+              Команда Героев
+            </h3>
+            <div style={{display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center'}}>
+              {[1, 2, 3, 4, 5].map(num => {
+                const isActivated = battlePass.badges && battlePass.badges.includes(num);
+                return (
+                  <img
+                    key={num}
+                    src={isActivated ? `${num}.png` : `${num}G.png`}
+                    alt={`Бейдж ${num}`}
+                    style={{
+                      width: '60px',
+                      height: '60px',
+                      objectFit: 'contain',
+                      transition: 'all 0.3s ease'
+                    }}
+                  />
+                );
+              })}
             </div>
           </div>
 
@@ -1123,6 +1173,7 @@ function App(){
                       <li key={reward.id}>
                         Уровень {reward.level} — {reward.text}
                         {reward.type === 'money' && reward.amount && ` (${reward.amount}₽)`}
+                        {reward.type === 'badge' && reward.badgeNumber && ` (Бейдж #${reward.badgeNumber})`}
                         <button className="text-btn" onClick={() => deleteReward(reward.id)} style={{marginLeft: '8px'}}>
                           <span className="material-icons" style={{fontSize: '16px'}}>delete</span>
                         </button>
@@ -1152,6 +1203,7 @@ function App(){
                   >
                     <option value="other">Не деньги</option>
                     <option value="money">Деньги</option>
+                    <option value="badge">Бейдж</option>
                   </select>
                   {newRewardType === 'money' && (
                     <input
@@ -1161,6 +1213,19 @@ function App(){
                       onChange={e => setNewRewardAmount(e.target.value)}
                       style={{width: '100px'}}
                     />
+                  )}
+                  {newRewardType === 'badge' && (
+                    <select
+                      value={newRewardBadgeNumber}
+                      onChange={e => setNewRewardBadgeNumber(e.target.value)}
+                      style={{width: '100px'}}
+                    >
+                      <option value="1">Бейдж 1</option>
+                      <option value="2">Бейдж 2</option>
+                      <option value="3">Бейдж 3</option>
+                      <option value="4">Бейдж 4</option>
+                      <option value="5">Бейдж 5</option>
+                    </select>
                   )}
                   <button onClick={addReward}>Добавить</button>
                 </div>
