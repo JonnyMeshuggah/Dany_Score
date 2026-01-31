@@ -883,9 +883,6 @@ function App(){
                     src={isActivated ? `badges/${num}.png` : `badges/${num}G.png`}
                     alt={`Бейдж ${num}`}
                     style={{
-                      width: '60px',
-                      height: '60px',
-                      objectFit: 'contain',
                       transition: 'all 0.3s ease'
                     }}
                   />
