@@ -494,13 +494,11 @@ input:focus, select:focus {
   align-items: flex-end;
   justify-content: space-around;
   gap: 16px;
-  height: 250px;
+  min-height: 200px;
   padding: 20px 10px 10px;
   background: #fafafa;
   border-radius: 8px;
   margin-top: 16px;
-  overflow: hidden;
-  position: relative;
 }
 
 .chart-bar {
@@ -522,6 +520,7 @@ input:focus, select:focus {
 .bar-column {
   width: 100%;
   min-height: 8px;
+  max-height: 180px;
   border-radius: 6px 6px 0 0;
   transition: height 0.5s ease, background-color 0.3s ease;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
