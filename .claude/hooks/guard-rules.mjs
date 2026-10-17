@@ -84,7 +84,15 @@ function checkSegment(tokens) {
   if (name === "git") {
     const { sub, subArgs, globals } = gitSubcommand(args);
     if (globals.some(g => /^core\.hookspath=/i.test(g))) return deny("подмена core.hooksPath отключает pre-commit.");
-    if (sub === "push") return deny("push выполняет человек после review.");
+    if (sub === "push") {
+      // Агент пушит только рабочие ветки, указанные явно; main — только через PR
+      const refs = subArgs.filter(a => !a.startsWith("-")).slice(1);
+      const dangerous = /[fd]/.test(shortFlags(subArgs)) ||
+        subArgs.some(a => /^--(force|mirror|all|delete|tags|prune)/.test(a)) || refs.some(r => r.startsWith("+"));
+      if (dangerous) return deny("push --force/--delete/--all/--mirror/--tags выполняет человек.");
+      if (refs.length === 0) return deny("укажи ветку явно: git push -u origin <ветка>.");
+      if (refs.some(r => /(^|:)(refs\/heads\/)?(main|master)$/.test(r))) return deny("push в main запрещён — только через PR.");
+    }
     if (sub === "commit" && (shortFlags(subArgs).includes("n") || subArgs.includes("--no-verify"))) {
       return deny("обход pre-commit проверок запрещён.");
     }
