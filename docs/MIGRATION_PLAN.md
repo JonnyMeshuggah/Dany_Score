@@ -63,9 +63,13 @@ Vercel Functions (/api)
 
 ### 2. Инфраструктура и ядро логики
 - [x] Vite + React, `vercel.json`, ESLint (React из npm, статика в `public/`, выдача из `dist/`)
-- `src/domain/rewards.js` — единая `computeDayRewards()`; утилиты дат
-- `src/domain/battlePass.js` — проверка заданий, расчёт уровня
-- Тесты (Vitest) по правилам FAQ
+- [x] `src/domain/rewards.js` — одно правило бонусов `rewardFor()` для добавления и пересчёта; `dates.js`
+- [x] `src/domain/battlePass.js` — проверка заданий, расчёт уровня; `grades.js` — `applyGrade()`
+- [x] Тесты (Vitest) по правилам FAQ, для боевого пропуска — на текущее поведение
+- [x] Исправлено (тест → фикс): разные бонусы при добавлении и пересчёте, потеря XP при нескольких
+      заданиях, `average_score` без новой оценки, дата по умолчанию в UTC
+- Осталось на этап 5: устаревшие значения в `addGrade`, `claimReward`, `cashOut`, `applyAdminBonus`
+  (`setBalance(balance + …)` из замыкания)
 
 ### 3. База и API
 - Drizzle-схема и миграции, middleware Firebase-токена и админ-токена, эндпоинты,
@@ -79,7 +83,7 @@ Vercel Functions (/api)
 
 ### 5. Фронт на API
 - Разбить `App` на компоненты, `GET /api/state` + обновление после мутаций,
-  нормальные диалоги вместо `alert`/`prompt`, локальная дата вместо UTC
+  нормальные диалоги вместо `alert`/`prompt`
 
 ### 6. Переключение
 1. Preview-деплой + миграция копии данных, сверка балансов
