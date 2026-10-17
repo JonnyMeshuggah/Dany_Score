@@ -1,8 +1,9 @@
 // Даты в истории хранятся строкой "ДД.ММ.ГГГГ", в поле <input type="date"> — "ГГГГ-ММ-ДД".
 
-// Значение по умолчанию для поля даты оценки
+// Значение по умолчанию для поля даты оценки — локальная дата (toISOString дал бы дату в UTC)
 export function todayISO(now = new Date()) {
-  return now.toISOString().split('T')[0];
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 }
 
 export function isoToRuDate(iso) {

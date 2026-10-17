@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isoToRuDate, parseRuDate, compareNewestFirst } from "../../src/domain/dates.js";
+import { todayISO, isoToRuDate, parseRuDate, compareNewestFirst } from "../../src/domain/dates.js";
 import { computeGradeStats } from "../../src/domain/stats.js";
 
 describe("даты", () => {
@@ -28,5 +28,17 @@ describe("статистика оценок", () => {
 
   it("без оценок среднее 0", () => {
     expect(computeGradeStats([]).average).toBe(0);
+  });
+});
+
+describe("дата по умолчанию (баг: UTC вместо локальной)", () => {
+  it("в 01:30 по Москве — сегодняшняя дата, а не вчерашняя", () => {
+    const tz = process.env.TZ;
+    process.env.TZ = "Europe/Moscow";
+    try {
+      expect(todayISO(new Date("2026-10-16T22:30:00Z"))).toBe("2026-10-17");
+    } finally {
+      if (tz === undefined) delete process.env.TZ; else process.env.TZ = tz;
+    }
   });
 });
