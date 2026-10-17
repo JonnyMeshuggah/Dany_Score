@@ -62,7 +62,7 @@ Vercel Functions (/api)
       транспилирует только скрипты, которые есть на `DOMContentLoaded`)
 
 ### 2. Инфраструктура и ядро логики
-- Vite + React, `vercel.json`, ESLint
+- [x] Vite + React, `vercel.json`, ESLint (React из npm, статика в `public/`, выдача из `dist/`)
 - `src/domain/rewards.js` — единая `computeDayRewards()`; утилиты дат
 - `src/domain/battlePass.js` — проверка заданий, расчёт уровня
 - Тесты (Vitest) по правилам FAQ

@@ -5,19 +5,22 @@
 
 ## Проект в двух словах
 - Семейное приложение «Учёба = Деньги» (TakeFive): оценки → рубли, бонусы, боевой пропуск.
-- Сейчас: React 18 + `babel-standalone@6` из CDN, без сборки; Firestore + Firebase Auth; хостинг Vercel.
+- Сейчас: React 18 + Vite (`src/App.jsx`, сборка в `dist/`); Firestore + Firebase Auth; хостинг Vercel.
 - Идёт переезд на Neon Postgres — план и статус в `docs/MIGRATION_PLAN.md`.
 
 ## Неочевидное (нельзя вывести из кода)
-- `babel-standalone@6` транспилирует только `text/babel`-скрипты, которые есть в DOM на `DOMContentLoaded`.
-  Динамически добавленный скрипт не выполнится — `app.js` подключается статическим тегом.
+- Firebase подключён compat-скриптами из CDN (глобалы `firebase`, `db`), конфиг приходит из `/api/env`
+  inline-скриптом в `index.html`; `initFirebase` в `src/App.jsx` ждёт `window.env`.
+- Vercel раздаёт только `dist/`; `.vercelignore` решает, что загружается на сборку. Статика без обработки —
+  в `public/`.
 - `package.json` без `"type": "module"`: `api/*.js` — CommonJS-функции Vercel. Скрипты Node — `.mjs`.
 - Данные пользователя — один документ `users/{uid}`; автосохранение пишет весь `history` целиком.
-- Правила наград описаны для пользователя в `faq.html` — это продуктовая спецификация.
+- Правила наград описаны для пользователя в `public/faq.html` — это продуктовая спецификация.
 
 ## Команды
 - `npm run check` — lint + поиск секретов + тесты. **Обязателен перед «готово» и перед коммитом.**
 - `npm run lint`, `npm test`, `npm run check:secrets` — по отдельности.
+- `npm run build` — сборка в `dist/` (без ключей; приложение без `/api/env` не запустится).
 - Локального запуска приложения без ключей Firebase нет; UI проверяет человек на Preview-деплое.
 
 ## Границы (технически закреплены в `.claude/settings.json` и `.claude/hooks/guard.mjs`)
