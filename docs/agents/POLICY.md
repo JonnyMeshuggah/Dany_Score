@@ -50,14 +50,25 @@ GLM: провайдер, endpoint, допустимые классы данны�
 | — | — | Пока не нужны |
 
 ## Защита ветки `main` (настраивает владелец репозитория)
+Изменения в `main` — только через PR с зелёным CI (`check`), для всех, включая владельца.
+Обязательное одобрение не включено: у репозитория один мейнтейнер, а свой PR одобрить нельзя —
+human review фиксируется в PR-шаблоне. Когда появится второй участник — поднять до 1.
 ```
-gh api -X PUT repos/JonnyMeshuggah/Dany_Score/branches/main/protection \
-  -f required_status_checks[strict]=true \
-  -f 'required_status_checks[contexts][]=check' \
-  -F enforce_admins=true \
-  -F required_pull_request_reviews[required_approving_review_count]=1 \
-  -F restrictions=null
+gh auth login
+gh api -X PUT repos/JonnyMeshuggah/Dany_Score/branches/main/protection --input - <<'EOF'
+{
+  "required_status_checks": { "strict": true, "contexts": ["check"] },
+  "enforce_admins": true,
+  "required_pull_request_reviews": { "required_approving_review_count": 0 },
+  "restrictions": null,
+  "allow_force_pushes": false,
+  "allow_deletions": false
+}
+EOF
+gh api repos/JonnyMeshuggah/Dany_Score/branches/main/protection -q '.required_status_checks.contexts'
 ```
+Требуются права администратора репозитория. Без `gh`: Settings → Branches → Add rule для `main` →
+Require a pull request, Require status checks (`check`), Do not allow bypassing, без force push.
 
 ## Инциденты
 Если агент выполнил разрушительное действие или секрет попал в контекст/лог/коммит:
