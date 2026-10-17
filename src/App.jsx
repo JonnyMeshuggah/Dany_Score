@@ -1,9 +1,10 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { todayISO, isoToRuDate, compareNewestFirst } from "./domain/dates.js";
-import { recalculateHistory, rewardForNewGrade, computeBalance } from "./domain/rewards.js";
+import { todayISO, isoToRuDate } from "./domain/dates.js";
+import { recalculateHistory, computeBalance } from "./domain/rewards.js";
 import { computeGradeStats } from "./domain/stats.js";
-import { levelProgress, findCompletedTasks, completeTasks } from "./domain/battlePass.js";
+import { levelProgress, completeTasks } from "./domain/battlePass.js";
+import { applyGrade } from "./domain/grades.js";
 
 // ==== Версия приложения ====
 const APP_VERSION = "v1.3.0-beta";
@@ -511,17 +512,15 @@ function App(){
   // ---- App logic
   const addGrade = ()=>{
     if(!user) return alert("Сначала войдите в аккаунт");
-    const date = isoToRuDate(gradeDate);
-    const { reward: total, bonus: bonusDesc } = rewardForNewGrade(history, { date, subject: selectedSubject, grade });
+    const input = {id: Date.now().toString(), date: isoToRuDate(gradeDate), subject: selectedSubject, grade};
+    const { entry, history: updatedHistory, tasks } = applyGrade(history, battlePass, input);
 
-    setBalance(balance + total);
+    setBalance(balance + entry.reward);
     setHistoryReadyForSave(true);
-    const newEntry = {id: Date.now().toString(), date, subject:selectedSubject, grade, reward: total, bonus: bonusDesc};
-    const updatedHistory = [newEntry, ...history].sort(compareNewestFirst);
     setHistory(updatedHistory);
 
-    // Проверяем задания боевого пропуска (average_score пока считается по истории без новой оценки)
-    applyCompletedTasks(findCompletedTasks(battlePass, updatedHistory, new Date(), computeGradeStats(history)));
+    // Задания боевого пропуска
+    applyCompletedTasks(tasks);
   };
 
   const deleteEntry = (i)=>{

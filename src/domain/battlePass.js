@@ -17,8 +17,8 @@ export function levelProgress(bp) {
 }
 
 // Задания, которые выполнены после добавления оценки. history — уже с новой оценкой, новые сверху.
-// stats — статистика для average_score (по умолчанию считается по history).
-export function findCompletedTasks(bp, history, now = new Date(), stats = computeGradeStats(history)) {
+export function findCompletedTasks(bp, history, now = new Date()) {
+  const stats = computeGradeStats(history);
   return bp.tasks.filter(task => {
     if (bp.completedTasks.includes(task.id)) return false;
 
