@@ -89,3 +89,31 @@ describe("баланс", () => {
     expect(computeBalance([{ reward: 250 }, { reward: -1000 }, { reward: "—" }])).toBe(-750);
   });
 });
+
+describe("добавление и пересчёт считают одинаково (баг: разные правила серии)", () => {
+  it("«н» по предмету не прерывает серию ни при добавлении, ни при пересчёте", () => {
+    const history = [
+      { id: "2", date: D, subject: "Алгебра", grade: "н", reward: 0, bonus: "" },
+      { id: "1", date: D, subject: "Алгебра", grade: 5, reward: 250, bonus: "" }
+    ];
+    const entry = { id: "3", date: D, subject: "Алгебра", grade: 5 };
+    const added = rewardForNewGrade(history, entry);
+    const recalculated = recalculateHistory([...history, entry]).find(e => e.id === "3");
+    expect(added).toEqual({ reward: recalculated.reward, bonus: recalculated.bonus });
+  });
+
+  it("на смешанных последовательностях добавление совпадает с пересчётом", () => {
+    const seqs = [
+      [g("Алгебра", 5), g("Алгебра", "н"), g("Алгебра", 5), g("Физика", 5)],
+      [g("Алгебра", "—"), g("Алгебра", 5), g("Алгебра", 5), g("Алгебра", 5)],
+      [g("Физика", 5), g("Алгебра", 5), g("Физика", "н"), g("Физика", 5), g("Алгебра", 5)]
+    ];
+    for (const s of seqs) {
+      let history = [];
+      for (const e of s) {
+        history = [typeof e.grade === "number" ? { ...e, ...rewardForNewGrade(history, e) } : e, ...history];
+      }
+      expect(recalculateHistory(history)).toEqual(history);
+    }
+  });
+});
