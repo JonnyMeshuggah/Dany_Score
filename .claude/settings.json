@@ -14,6 +14,8 @@
       "Bash(git show*)",
       "Bash(git blame*)",
       "Bash(git branch)",
+      "Bash(git push -u origin *)",
+      "Bash(gh pr create*)",
       "Bash(git worktree list*)"
     ],
     "ask": [
@@ -37,7 +39,6 @@
       "WebFetch"
     ],
     "deny": [
-      "Bash(git push*)",
       "Bash(git reset --hard*)",
       "Bash(vercel*)",
       "Bash(npx vercel*)",
