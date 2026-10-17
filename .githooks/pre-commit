@@ -1,0 +1,6 @@
+#!/bin/sh
+# Одинаковый gate для человеческих и AI-коммитов. Подключается через `npm install` (скрипт prepare).
+npm run --silent check || {
+  echo "pre-commit: npm run check не прошёл — коммит отменён." >&2
+  exit 1
+}

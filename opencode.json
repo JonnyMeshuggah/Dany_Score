@@ -1,0 +1,63 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": ["docs/agents/RULES.md"],
+  "permission": {
+    "edit": "ask",
+    "webfetch": "ask",
+    "bash": {
+      "*": "ask",
+      "git status*": "allow",
+      "git diff*": "allow",
+      "git log*": "allow",
+      "git show*": "allow",
+      "npm run check*": "allow",
+      "npm run lint*": "allow",
+      "npm test*": "allow",
+      "git push*": "deny",
+      "git reset --hard*": "deny",
+      "* --no-verify*": "deny",
+      "vercel*": "deny",
+      "npx vercel*": "deny",
+      "firebase*": "deny",
+      "npx firebase*": "deny",
+      "npm publish*": "deny",
+      "rm -rf*": "deny",
+      "cat secrets/*": "deny",
+      "cat backups/*": "deny",
+      "cat .env*": "deny"
+    }
+  },
+  "agent": {
+    "plan": {
+      "permission": {
+        "edit": "deny",
+        "bash": {
+          "*": "deny",
+          "git status*": "allow",
+          "git diff*": "allow",
+          "git log*": "allow",
+          "git show*": "allow",
+          "git blame*": "allow",
+          "ls*": "allow"
+        }
+      }
+    },
+    "review": {
+      "description": "Независимое ревью diff свежим контекстом: только корректность, безопасность, совместимость",
+      "mode": "subagent",
+      "prompt": "{file:./docs/agents/REVIEW.md}",
+      "permission": {
+        "edit": "deny",
+        "webfetch": "deny",
+        "bash": {
+          "*": "deny",
+          "git status*": "allow",
+          "git diff*": "allow",
+          "git log*": "allow",
+          "git show*": "allow",
+          "npm run check*": "allow"
+        }
+      }
+    }
+  }
+}
