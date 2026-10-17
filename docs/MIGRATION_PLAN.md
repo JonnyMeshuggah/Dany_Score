@@ -59,7 +59,7 @@ Vercel Functions (/api)
 - [x] Убрать лишние записи в Firestore на каждый snapshot (квота, устаревший `isSaving`)
 - [x] Импорт CSV: `grade` → число, проставлять `id`, пропускать строки без даты (суммы — как в файле)
 - [x] Убрать двойное подключение `app.js` (оставлен статический тег: babel-standalone
-      транспилирует только скрипты, которые есть на `DOMContentLoaded`)
+      транспилирует только скрипты, которые есть на `DOMContentLoaded`). На этапе 2 babel заменён Vite.
 
 ### 2. Инфраструктура и ядро логики
 - [x] Vite + React, `vercel.json`, ESLint (React из npm, статика в `public/`, выдача из `dist/`)
