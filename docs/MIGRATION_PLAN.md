@@ -72,8 +72,15 @@ Vercel Functions (/api)
   (`setBalance(balance + …)` из замыкания)
 
 ### 3. База и API
-- Drizzle-схема и миграции, middleware Firebase-токена и админ-токена, эндпоинты,
-  интеграционные тесты на ветке Neon
+- [x] Drizzle-схема (`server/db/schema.mjs`) и миграции (`drizzle/`, `npm run db:migrate`)
+- [x] Проверка ID-токена Firebase (`jose`, ключи Google) и админ-токена по PIN с rate-limit в БД
+- [x] Эндпоинты — одна функция `api/router.mjs` (rewrite `/api/*` в `vercel.json`, кроме `/api/env`);
+      мутации в транзакции с блокировкой строки пользователя, правила — из `src/domain/*`
+- [x] Интеграционные тесты на PGlite (Postgres в памяти, те же миграции), без сети
+- [ ] Подключить Neon к Preview, `npm run db:migrate`, задать `ADMIN_PIN_HASH`/`ADMIN_TOKEN_SECRET`
+      (`npm run admin:hash-pin`), проверить на Preview
+- Отличия от Firestore-версии: XP и бейдж копируются в отметку выполнения/получения — удаление
+  задания или награды их не отнимает (как раньше); «сегодня» для выводов и бонусов — по Москве
 
 ### 4. Миграция данных Firestore → Neon
 - Нормализация: даты `ДД.ММ.ГГГГ` → `date`, `grade` → число, `kind` по префиксу
