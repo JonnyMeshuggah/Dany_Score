@@ -1,11 +1,15 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
+import { todayISO, isoToRuDate } from "./domain/dates.js";
+import { recalculateHistory, computeBalance } from "./domain/rewards.js";
+import { computeGradeStats } from "./domain/stats.js";
+import { levelProgress, completeTasks } from "./domain/battlePass.js";
+import { applyGrade } from "./domain/grades.js";
 
 // ==== Версия приложения ====
 const APP_VERSION = "v1.3.0-beta";
 
-// ==== Бизнес-логика наград ====
-const baseRewards = {5: 250, 4: 100, 3: -500, 2: -2000};
+// ==== Бизнес-логика наград — в src/domain/ ====
 const SUBJECTS = [
   "Алгебра","Биология","Теория вероятности","География","Геометрия","Изо","Английский",
   "Информатика","История","Литература","Математический практикум","Музыка","Практикум по русскому",
@@ -59,7 +63,7 @@ function App(){
   const [subjects] = React.useState(SUBJECTS);
   const [selectedSubject, setSelectedSubject] = React.useState(subjects[0]);
   const [grade, setGrade] = React.useState(5);
-  const [gradeDate, setGradeDate] = React.useState(new Date().toISOString().split('T')[0]);
+  const [gradeDate, setGradeDate] = React.useState(todayISO());
   const [cashOutAmount, setCashOutAmount] = React.useState("");
   const [showBPAdmin, setShowBPAdmin] = React.useState(false);
   const [adminAccess, setAdminAccess] = React.useState(false);
@@ -230,25 +234,7 @@ function App(){
   const logout = async ()=>{ await firebase.auth().signOut(); };
 
   // ---- Statistics calculation
-  const calculateStats = ()=>{
-    const stats = {2: 0, 3: 0, 4: 0, 5: 0};
-    let totalGrades = 0;
-    let totalSum = 0;
-
-    history.forEach(entry => {
-      const g = entry.grade;
-      if(g === 2 || g === 3 || g === 4 || g === 5){
-        stats[g]++;
-        totalGrades++;
-        totalSum += g;
-      }
-    });
-
-    const average = totalGrades > 0 ? (totalSum / totalGrades).toFixed(2) : 0;
-    const maxCount = Math.max(stats[2], stats[3], stats[4], stats[5], 1);
-
-    return { stats, average, maxCount, totalGrades };
-  };
+  const calculateStats = () => computeGradeStats(history);
 
   // ---- History filtering (последние 5 дней)
   const getFilteredHistory = () => {
@@ -271,44 +257,25 @@ function App(){
   };
 
   // ---- Battle Pass функции
-  // Расчёт уровня по XP (уровень начинается с 0)
-  const getLevelFromXP = (xp) => {
-    const level = Math.floor(xp / battlePass.xpPerLevel);
-    return Math.min(level, battlePass.maxLevel);
-  };
+  const getCurrentLevelProgress = () => levelProgress(battlePass);
 
-  // Расчёт XP для текущего уровня
-  const getCurrentLevelProgress = () => {
-    const currentLevelXP = battlePass.level * battlePass.xpPerLevel;
-    const xpInCurrentLevel = battlePass.xp - currentLevelXP;
-    return {
-      current: xpInCurrentLevel,
-      needed: battlePass.xpPerLevel,
-      percentage: Math.min((xpInCurrentLevel / battlePass.xpPerLevel) * 100, 100)
-    };
-  };
-
-  // Добавление XP
-  const addXP = (amount, reason) => {
-    const newXP = battlePass.xp + amount;
-    const newLevel = getLevelFromXP(newXP);
+  // Засчитать выполненные задания: XP, уровень и автосохранение одной записью
+  const applyCompletedTasks = (tasks) => {
+    if(tasks.length === 0) return;
     const oldLevel = battlePass.level;
+    const newLevel = completeTasks(battlePass, tasks).level;
 
     setBattlePass(prev => {
-      const updated = {
-        ...prev,
-        xp: newXP,
-        level: newLevel
-      };
+      const updated = completeTasks(prev, tasks);
+      if(updated === prev) return prev; // всё уже засчитано
 
-      // Автосохранение игрового прогресса
       if(user && loaded){
         db.collection("users").doc(user.uid).set({
           battlePass: {
-            xp: newXP,
-            level: newLevel,
-            completedTasks: prev.completedTasks,
-            claimedRewards: prev.claimedRewards
+            xp: updated.xp,
+            level: updated.level,
+            completedTasks: updated.completedTasks,
+            claimedRewards: updated.claimedRewards
           }
         }, { merge: true }).catch(err => console.error("Auto-save XP error:", err));
       }
@@ -320,31 +287,6 @@ function App(){
     if(newLevel > oldLevel){
       alert(`🎉 Поздравляем! Достигнут уровень ${newLevel}! Проверьте награды.`);
     }
-  };
-
-  // Отметить задание как выполненное
-  const completeTask = (taskId, xpReward) => {
-    if(battlePass.completedTasks.includes(taskId)) return; // уже выполнено
-
-    setBattlePass(prev => {
-      const updated = {
-        ...prev,
-        completedTasks: [...prev.completedTasks, taskId]
-      };
-
-      // Автосохранение
-      if(user && loaded){
-        db.collection("users").doc(user.uid).set({
-          battlePass: {
-            completedTasks: updated.completedTasks
-          }
-        }, { merge: true }).catch(err => console.error("Auto-save task error:", err));
-      }
-
-      return updated;
-    });
-
-    addXP(xpReward, `Выполнено задание`);
   };
 
   // Получить награду
@@ -404,51 +346,6 @@ function App(){
     } else {
       alert(`✅ Награда "${reward.text}" отмечена как полученная!`);
     }
-  };
-
-  // Проверка заданий боевого пропуска
-  const checkBattlePassTasks = (updatedHistory) => {
-    battlePass.tasks.forEach(task => {
-      // Пропускаем уже выполненные задания
-      if(battlePass.completedTasks.includes(task.id)) return;
-
-      let completed = false;
-
-      // Проверка по типу задания
-      if(task.type === 'streak_fives'){
-        // Проверка N пятёрок подряд
-        const recentGrades = updatedHistory.slice(0, task.target || 3);
-        const allFives = recentGrades.every(h => h.grade === 5);
-        if(recentGrades.length >= (task.target || 3) && allFives){
-          completed = true;
-        }
-      } else if(task.type === 'total_grades_week'){
-        // Проверка N оценок за неделю
-        const weekAgo = new Date();
-        weekAgo.setDate(weekAgo.getDate() - 7);
-        const weekGrades = updatedHistory.filter(h => {
-          const parts = h.date.split('.');
-          if(parts.length === 3){
-            const entryDate = new Date(parts[2], parts[1]-1, parts[0]);
-            return entryDate >= weekAgo;
-          }
-          return false;
-        });
-        if(weekGrades.length >= (task.target || 10)){
-          completed = true;
-        }
-      } else if(task.type === 'average_score'){
-        // Проверка среднего балла
-        const { average } = calculateStats();
-        if(parseFloat(average) >= (task.target || 4.5)){
-          completed = true;
-        }
-      }
-
-      if(completed){
-        completeTask(task.id, task.xp || 100);
-      }
-    });
   };
 
   // ---- BP Admin функции
@@ -613,85 +510,23 @@ function App(){
   };
 
   // ---- App logic
-  const recalculateHistory = (entries) => {
-    const sorted = [...entries].sort((a,b) => {
-      const [da,ma,ya] = a.date.split('.'), [db,mb,yb] = b.date.split('.');
-      const diff = new Date(ya,ma-1,da) - new Date(yb,mb-1,db);
-      return diff !== 0 ? diff : (parseInt(a.id)||0) - (parseInt(b.id)||0);
-    });
-    const result = [];
-    for (const entry of sorted) {
-      if (typeof entry.grade !== 'number') { result.push(entry); continue; }
-      let reward = baseRewards[entry.grade] || 0;
-      let bonus = 1, bonusDesc = "";
-      const dayGrades = result.filter(h => h.date === entry.date && typeof h.grade === 'number');
-      const dayFives = dayGrades.filter(h => h.grade === 5).length;
-      if(entry.grade===5 && dayFives===1){ bonus=2; bonusDesc="Удвоение за 2 пятёрки за день"; }
-      if(entry.grade===5 && dayFives===2){ bonus=3; bonusDesc="Утроение за 3 пятёрки за день"; }
-      const daySameSubject = result.filter(h => h.date === entry.date && h.subject === entry.subject && typeof h.grade === 'number');
-      const lastTwo = daySameSubject.slice(-2).map(e => e.grade);
-      if(entry.grade===5){
-        if(lastTwo.length>=2 && lastTwo[0]===5 && lastTwo[1]===5){
-          bonus=3.5; bonusDesc="Хет-трик 3 пятёрки подряд по предмету";
-        }else if(lastTwo.length>=1 && lastTwo[lastTwo.length-1]===5){
-          bonus=2.5; bonusDesc="Бонус 2.5 за 2 подряд по предмету";
-        }
-      }
-      result.push({...entry, reward: reward * bonus, bonus: bonusDesc});
-    }
-    result.sort((a,b) => {
-      const [da,ma,ya] = a.date.split('.'), [db,mb,yb] = b.date.split('.');
-      const diff = new Date(yb,mb-1,db) - new Date(ya,ma-1,da);
-      return diff !== 0 ? diff : (parseInt(b.id)||0) - (parseInt(a.id)||0);
-    });
-    return result;
-  };
-
   const addGrade = ()=>{
     if(!user) return alert("Сначала войдите в аккаунт");
-    const [y, m, d] = gradeDate.split('-');
-    const date = `${d}.${m}.${y}`;
-    let reward = baseRewards[grade] || 0;
-    let bonus = 1;
-    let bonusDesc = "";
+    const input = {id: Date.now().toString(), date: isoToRuDate(gradeDate), subject: selectedSubject, grade};
+    const { entry, history: updatedHistory, tasks } = applyGrade(history, battlePass, input);
 
-    // дневные бонусы
-    const todayGrades = history.filter(h=>h.date===date);
-    const todayFives = todayGrades.filter(h=>h.grade===5).length;
-    if(grade===5 && todayFives===1){ bonus=2; bonusDesc="Удвоение за 2 пятёрки за день"; }
-    if(grade===5 && todayFives===2){ bonus=3; bonusDesc="Утроение за 3 пятёрки за день"; }
-
-    // серии по предмету (только сегодняшние записи!)
-    const todaySameSubject = history.filter(h => h.date === date && h.subject === selectedSubject)
-      .sort((a,b) => (parseInt(a.id)||0) - (parseInt(b.id)||0));
-    const lastTwo = todaySameSubject.slice(-2).map(e=>e.grade);
-    if(grade===5){
-      if(lastTwo.length>=2 && lastTwo[0]===5 && lastTwo[1]===5){
-        bonus=3.5; bonusDesc="Хет-трик 3 пятёрки подряд по предмету";
-      }else if(lastTwo.length>=1 && lastTwo[lastTwo.length-1]===5){
-        bonus=2.5; bonusDesc="Бонус 2.5 за 2 подряд по предмету";
-      }
-    }
-
-    const total = reward * bonus;
-    setBalance(balance + total);
+    setBalance(balance + entry.reward);
     setHistoryReadyForSave(true);
-    const newEntry = {id: Date.now().toString(), date, subject:selectedSubject, grade, reward: total, bonus: bonusDesc};
-    const updatedHistory = [newEntry, ...history].sort((a,b) => {
-      const [da,ma,ya] = a.date.split('.'), [db,mb,yb] = b.date.split('.');
-      const diff = new Date(yb,mb-1,db) - new Date(ya,ma-1,da);
-      return diff !== 0 ? diff : (parseInt(b.id)||0) - (parseInt(a.id)||0);
-    });
     setHistory(updatedHistory);
 
-    // Проверяем задания боевого пропуска
-    checkBattlePassTasks(updatedHistory);
+    // Задания боевого пропуска
+    applyCompletedTasks(tasks);
   };
 
   const deleteEntry = (i)=>{
     const arr = [...history]; arr.splice(i,1);
     const recalculated = recalculateHistory(arr);
-    const newBalance = recalculated.reduce((sum, e) => sum + (typeof e.reward === 'number' ? e.reward : 0), 0);
+    const newBalance = computeBalance(recalculated);
     setBalance(newBalance);
     setHistoryReadyForSave(true);
     setHistory(recalculated);
@@ -868,7 +703,7 @@ function App(){
               <select value={grade} onChange={e=>setGrade(Number(e.target.value))}>
                 {[5,4,3,2].map(g=><option key={g} value={g}>{g}</option>)}
               </select>
-              <input type="date" value={gradeDate} onChange={e=>setGradeDate(e.target.value)} max={new Date().toISOString().split('T')[0]} />
+              <input type="date" value={gradeDate} onChange={e=>setGradeDate(e.target.value)} max={todayISO()} />
               <button onClick={addGrade}>
                 <span className="material-icons" style={{verticalAlign:'middle',marginRight:'6px'}}>add</span>
                 Добавить
