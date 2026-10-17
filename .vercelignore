@@ -1,0 +1,15 @@
+# Vercel раздаёт корень репозитория как статику — служебное наружу не публикуем
+.claude
+.github
+.githooks
+docs
+scripts
+tests
+backups
+secrets
+AGENTS.md
+CLAUDE.md
+opencode.json
+eslint.config.mjs
+*.docx
+.env*

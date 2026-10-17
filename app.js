@@ -67,7 +67,8 @@ function App(){
   const [loaded, setLoaded] = React.useState(false);
   const [hydrated, setHydrated] = React.useState(false);
   const [historyReadyForSave, setHistoryReadyForSave] = React.useState(true);
-  const [isSaving, setIsSaving] = React.useState(false);
+  // Последнее состояние {balance, history}, совпадающее с сервером — чтобы не писать обратно то, что пришло из snapshot
+  const lastSyncedRef = React.useRef(null);
 
   const [user, setUser] = React.useState(null);
   const [email, setEmail] = React.useState("");
@@ -108,7 +109,7 @@ function App(){
   React.useEffect(()=>{
     return firebase.auth().onAuthStateChanged(u=>{
       setUser(u);
-      if(!u){ setHistory([]); setBalance(0); setLoaded(false); setHistoryReadyForSave(true); }
+      if(!u){ lastSyncedRef.current = null; setHistory([]); setBalance(0); setLoaded(false); setHistoryReadyForSave(true); }
     });
   },[]);
 
@@ -136,10 +137,12 @@ function App(){
         normalizedHistory = [];
       }
 
-      // НЕ перезаписываем локальное состояние пока идет сохранение
-      if (historyIsSafeToPersist && !isSaving) {
+      // Пока запись не подтверждена, Firestore отдаёт локальную версию документа — её можно применять
+      if (historyIsSafeToPersist) {
+        const normalizedBalance = typeof data.balance === "number" ? data.balance : 0;
+        lastSyncedRef.current = JSON.stringify({ balance: normalizedBalance, history: normalizedHistory });
         setHistory(normalizedHistory);
-        setBalance(typeof data.balance === "number" ? data.balance : 0);
+        setBalance(normalizedBalance);
       }
       setHistoryReadyForSave(historyIsSafeToPersist);
 
@@ -159,6 +162,7 @@ function App(){
       }
 
     } else {
+      lastSyncedRef.current = JSON.stringify({ balance: 0, history: [] });
       setHistory([]);
       setBalance(0);
       setHistoryReadyForSave(true);
@@ -175,17 +179,18 @@ function App(){
   React.useEffect(()=>{
   if(!loaded || !user || !historyReadyForSave || !hydrated) return;
 
-  setIsSaving(true);
+  // Данные совпадают с пришедшими из snapshot — писать нечего (раньше тут был лишний write на каждый snapshot)
+  const serialized = JSON.stringify({ balance, history });
+  if (serialized === lastSyncedRef.current) return;
+  lastSyncedRef.current = serialized;
+
   db.collection("users").doc(user.uid).set(
     { balance, history },
     { merge: true }
   )
-      .then(() => {
-        setTimeout(() => setIsSaving(false), 500); // Даем время onSnapshot обработать
-      })
       .catch(err => {
         console.error("Save error:", err);
-        setIsSaving(false);
+        lastSyncedRef.current = null; // следующее изменение повторит попытку
       });
   },[balance, history, historyReadyForSave, loaded, user, hydrated]);
 
@@ -728,13 +733,26 @@ function App(){
     const reader = new FileReader();
     reader.onload = (evt)=>{
       const text = evt.target.result;
-      const lines = text.trim().split(/\r?\n/);
+      const lines = text.replace(/^\uFEFF/, '').trim().split(/\r?\n/).filter(l => l.trim());
       if(lines.length<2) return alert("Файл пуст или неверный формат");
-      const data = lines.slice(1).map(line=>{
-        const p = line
+      const rows = lines.slice(1)
+        .map(line => line
           .split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/)
-          .map(x=>x.replace(/^"|"$/g,'').replace(/""/g,'"'));
-        return {date:p[0], subject:p[1], grade:p[2], bonus:p[3], reward:Number(p[4])};
+          .map(x=>x.replace(/^"|"$/g,'').replace(/""/g,'"')))
+        .filter(p => /^\d{2}\.\d{2}\.\d{4}$/.test(p[0] || ""));
+      if(rows.length===0) return alert("В файле нет записей с корректной датой (ДД.ММ.ГГГГ)");
+      // Файл выгружен от новых к старым — первой строке даём наибольший id, чтобы сохранить порядок внутри дня
+      const baseId = Date.now();
+      const data = rows.map((p, i)=>{
+        const g = Number(p[2]);
+        return {
+          id: String(baseId + rows.length - i),
+          date: p[0],
+          subject: p[1],
+          grade: [2,3,4,5].includes(g) ? g : (p[2] || "—"),
+          bonus: p[3] || "",
+          reward: Number(p[4]) || 0
+        };
       });
       const total = data.reduce((s,x)=>s+(isFinite(x.reward)?x.reward:0),0);
       if(window.confirm("Загрузить историю из файла и заменить текущую?")){

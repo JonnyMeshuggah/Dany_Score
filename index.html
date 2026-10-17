@@ -21,18 +21,13 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
- <!-- Ждём /api/env, затем подключаем app.js -->
+ <!-- Загружаем конфиг Firebase из /api/env; app.js подключается один раз внизу страницы -->
 <script>
   (async function(){
     try {
       const resp = await fetch('/api/env', { cache: 'no-store' });
       if (!resp.ok) throw new Error('env load failed');
       window.env = await resp.json();
-      // Подключаем app.js только теперь — env уже в window.env
-      var s = document.createElement('script');
-      s.type = 'text/babel';
-      s.src = 'app.js';
-      document.body.appendChild(s);
     } catch (e) {
       console.error('Не удалось загрузить /api/env', e);
       alert('Ошибка загрузки конфигурации. Проверь переменные окружения на Vercel.');
@@ -76,7 +71,7 @@
 
 
 
-  <!-- Основное приложение -->
+  <!-- Основное приложение (initFirebase в app.js сам ждёт window.env) -->
   <script type="text/babel" src="app.js"></script>
 </body>
 </html>
