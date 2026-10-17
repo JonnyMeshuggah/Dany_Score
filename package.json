@@ -9,6 +9,7 @@
     "test": "vitest run",
     "check:secrets": "node scripts/check-secrets.mjs",
     "backup:firestore": "node scripts/export-firestore.mjs",
+    "probe:rules": "node scripts/probe-firestore-rules.mjs",
     "prepare": "git config core.hooksPath .githooks || true"
   },
   "devDependencies": {
