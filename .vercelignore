@@ -11,6 +11,8 @@ secrets
 AGENTS.md
 CLAUDE.md
 opencode.json
+firestore.rules
+firebase.json
 eslint.config.mjs
 *.docx
 .env*
