@@ -30,7 +30,8 @@ export function createRouter(routes) {
       if (match.length === 0) throw notFound();
       const found = match.find(x => x.r.method === req.method);
       if (!found) throw new HttpError(405, "method_not_allowed");
-      const params = Object.fromEntries(found.r.names.map((n, i) => [n, decodeURIComponent(found.m[i + 1])]));
+      const decode = (v) => { try { return decodeURIComponent(v); } catch { throw badRequest("Некорректный путь"); } };
+      const params = Object.fromEntries(found.r.names.map((n, i) => [n, decode(found.m[i + 1])]));
       const res = await found.r.handler(req, params);
       return { status: 200, ...res };
     } catch (err) {

@@ -7,8 +7,9 @@ import { hashPin } from "../server/auth.mjs";
 const rl = createInterface({ input: process.stdin, output: process.stdout });
 const pin = (await rl.question("PIN админки: ")).trim();
 rl.close();
-if (pin.length < 4) {
-  console.error("PIN — минимум 4 символа.");
+// Короткий PIN перебирается даже с лимитом попыток (общий лимит — 20 неудач за 15 минут)
+if (pin.length < 6) {
+  console.error("PIN — минимум 6 символов.");
   process.exit(1);
 }
 console.log(`ADMIN_PIN_HASH=${hashPin(pin)}`);

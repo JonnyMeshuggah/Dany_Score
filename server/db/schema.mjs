@@ -4,6 +4,7 @@ import {
   pgTable, pgEnum, text, integer, smallint, bigint, boolean, date, doublePrecision, timestamp, serial,
   index, uniqueIndex
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 export const entryKind = pgEnum("entry_kind", ["grade", "cashout", "admin_bonus", "bp_reward"]);
 
@@ -36,7 +37,10 @@ export const bpSeasons = pgTable("bp_seasons", {
   maxLevel: integer("max_level").notNull(),
   xpPerLevel: integer("xp_per_level").notNull(),
   isActive: boolean("is_active").notNull().default(true)
-}, t => [index("bp_seasons_user_idx").on(t.userId)]);
+}, t => [
+  index("bp_seasons_user_idx").on(t.userId),
+  uniqueIndex("bp_seasons_active_uq").on(t.userId).where(sql`${t.isActive}`)
+]);
 
 export const bpTasks = pgTable("bp_tasks", {
   id: serial("id").primaryKey(),

@@ -10,9 +10,13 @@ const app = createApp({
   withDb: (fn) => withNeonDb(process.env.DATABASE_URL, fn)
 });
 
+// Тело — всегда объект: строка, null и массив превращаются в {}
 function parseBody(body) {
-  if (typeof body !== "string") return body ?? {};
-  try { return JSON.parse(body); } catch { return {}; }
+  let value = body;
+  if (typeof value === "string") {
+    try { value = JSON.parse(value); } catch { value = null; }
+  }
+  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
 }
 
 export default async function handler(req, res) {

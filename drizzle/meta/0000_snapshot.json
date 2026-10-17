@@ -1,5 +1,5 @@
 {
-  "id": "acc803b9-6e43-486d-87dc-d528cbf43ae6",
+  "id": "408f4f36-78fd-4e09-8f9f-9a78669577fa",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -324,6 +324,22 @@
             }
           ],
           "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "bp_seasons_active_uq": {
+          "name": "bp_seasons_active_uq",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"bp_seasons\".\"is_active\"",
           "concurrently": false,
           "method": "btree",
           "with": {}

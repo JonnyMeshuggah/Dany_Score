@@ -10,6 +10,7 @@ const FIREBASE_JWKS_URL =
   "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
 const ADMIN_AUDIENCE = "dany-score-admin";
 export const ADMIN_TOKEN_TTL_SEC = 30 * 60;
+const CLOCK_SKEW_SEC = 60;
 
 const unauthorized = () => new HttpError(401, "unauthorized");
 const forbidden = () => new HttpError(403, "forbidden");
@@ -25,13 +26,17 @@ export function createFirebaseVerifier({ projectId, keys = firebaseKeys() }) {
       const { payload } = await jwtVerify(token, keys, {
         issuer: `https://securetoken.google.com/${projectId}`,
         audience: projectId,
-        algorithms: ["RS256"]
+        algorithms: ["RS256"],
+        requiredClaims: ["exp", "iat", "sub"]
       });
       const now = Math.floor(Date.now() / 1000);
       if (typeof payload.sub !== "string" || payload.sub === "" || payload.sub.length > 128) throw new Error("sub");
-      if (typeof payload.auth_time !== "number" || payload.auth_time > now) throw new Error("auth_time");
+      if (payload.iat > now + CLOCK_SKEW_SEC) throw new Error("iat");
+      if (typeof payload.auth_time !== "number" || payload.auth_time > now + CLOCK_SKEW_SEC) throw new Error("auth_time");
       return { uid: payload.sub, email: typeof payload.email === "string" ? payload.email : null };
-    } catch {
+    } catch (err) {
+      // Не смогли получить ключи Google — это сбой сервера, а не неверный токен
+      if (err?.code === "ERR_JWKS_TIMEOUT" || err instanceof TypeError) throw new HttpError(503, "auth_unavailable");
       throw unauthorized();
     }
   };

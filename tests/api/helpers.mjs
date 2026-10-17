@@ -31,7 +31,7 @@ export async function idToken(uid, overrides = {}) {
     .setIssuer(overrides.iss ?? `https://securetoken.google.com/${PROJECT_ID}`)
     .setAudience(overrides.aud ?? PROJECT_ID)
     .setSubject(uid)
-    .setIssuedAt(now - 10)
+    .setIssuedAt(overrides.iat ?? now - 10)
     .setExpirationTime(overrides.exp ?? now + 3600)
     .sign(overrides.key ?? privateKey);
 }

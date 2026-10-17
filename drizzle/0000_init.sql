@@ -88,5 +88,6 @@ ALTER TABLE "entries" ADD CONSTRAINT "entries_user_id_users_id_fk" FOREIGN KEY (
 CREATE INDEX "admin_unlock_attempts_user_at_idx" ON "admin_unlock_attempts" USING btree ("user_id","at");--> statement-breakpoint
 CREATE UNIQUE INDEX "bp_reward_claims_reward_uq" ON "bp_reward_claims" USING btree ("user_id","reward_id");--> statement-breakpoint
 CREATE INDEX "bp_seasons_user_idx" ON "bp_seasons" USING btree ("user_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "bp_seasons_active_uq" ON "bp_seasons" USING btree ("user_id") WHERE "bp_seasons"."is_active";--> statement-breakpoint
 CREATE UNIQUE INDEX "bp_task_completions_task_uq" ON "bp_task_completions" USING btree ("user_id","task_id");--> statement-breakpoint
 CREATE INDEX "entries_user_date_idx" ON "entries" USING btree ("user_id","date");

@@ -2,7 +2,7 @@
 // пользователя заблокирована (SELECT … FOR UPDATE): параллельные запросы одного пользователя
 // выполняются по очереди и видят записи друг друга. Правила наград и боевого пропуска — только
 // из src/domain, здесь они не дублируются.
-import { and, eq, gte, count } from "drizzle-orm";
+import { and, eq, gte, lt, count, sql } from "drizzle-orm";
 import * as t from "./db/schema.mjs";
 import { applyGrade } from "../src/domain/grades.js";
 import { recalculateHistory, computeBalance } from "../src/domain/rewards.js";
@@ -31,6 +31,10 @@ const MAX_AMOUNT = 10_000_000;
 const MAX_IMPORT_BYTES = 1_000_000;
 const PIN_WINDOW_MS = 15 * 60 * 1000;
 const PIN_MAX_FAILURES = 5;
+// Общий лимит на всех: аккаунты Firebase можно наплодить, и лимит на uid один не спасает от перебора
+const PIN_MAX_FAILURES_GLOBAL = 20;
+const PIN_ATTEMPTS_KEEP_MS = 24 * 60 * 60 * 1000;
+const PIN_LOCK_KEY = 724001; // ключ pg_advisory_xact_lock для попыток PIN
 
 // ---- Записи: строка БД ↔ запись истории в формате домена (id — порядок внутри дня)
 const ruToISO = (ru) => { const [d, m, y] = ru.split("."); return `${y}-${m}-${d}`; };
@@ -80,11 +84,13 @@ async function insertEntry(tx, uid, history, now, values) {
 
 // ---- Боевой пропуск: состояние в формате домена (src/domain/battlePass.js)
 async function activeSeason(tx, uid) {
-  const [season] = await tx.select().from(t.bpSeasons)
-    .where(and(eq(t.bpSeasons.userId, uid), eq(t.bpSeasons.isActive, true))).limit(1);
+  const find = () => tx.select().from(t.bpSeasons)
+    .where(and(eq(t.bpSeasons.userId, uid), eq(t.bpSeasons.isActive, true))).orderBy(t.bpSeasons.id).limit(1);
+  const [season] = await find();
   if (season) return season;
-  const [created] = await tx.insert(t.bpSeasons).values({ userId: uid, ...DEFAULT_SEASON }).returning();
-  return created;
+  // Активный сезон у пользователя один — это держит уникальный индекс bp_seasons_active_uq
+  await tx.insert(t.bpSeasons).values({ userId: uid, ...DEFAULT_SEASON }).onConflictDoNothing();
+  return (await find())[0];
 }
 
 async function loadBattlePass(tx, uid) {
@@ -144,9 +150,10 @@ function mutate(db, user, fn) {
 }
 
 // ---- Пользователь
+// Чтение тоже под блокировкой: первый запрос создаёт сезон по умолчанию
 export function getState(db, user) {
   return db.transaction(async tx => {
-    await ensureUser(tx, user);
+    await lockUser(tx, user);
     return buildState(tx, user.uid);
   });
 }
@@ -251,13 +258,19 @@ export async function unlockAdmin(db, user, body, env, now) {
   // Счётчик неудач — в БД: память serverless-функции не переживает вызов.
   // Попытка записывается в той же транзакции, ошибка бросается уже после фиксации.
   const ok = await db.transaction(async tx => {
-    await lockUser(tx, user);
-    const [{ failures }] = await tx.select({ failures: count() }).from(t.adminUnlockAttempts).where(and(
-      eq(t.adminUnlockAttempts.userId, user.uid),
+    await ensureUser(tx, user);
+    // Все попытки входа — по очереди, иначе параллельные запросы обходят общий лимит
+    await tx.execute(sql`select pg_advisory_xact_lock(${PIN_LOCK_KEY})`);
+    await tx.delete(t.adminUnlockAttempts)
+      .where(lt(t.adminUnlockAttempts.at, new Date(now.getTime() - PIN_ATTEMPTS_KEEP_MS)));
+    const recentFailures = and(
       eq(t.adminUnlockAttempts.ok, false),
       gte(t.adminUnlockAttempts.at, new Date(now.getTime() - PIN_WINDOW_MS))
-    ));
-    if (failures >= PIN_MAX_FAILURES) return null;
+    );
+    const [{ mine }] = await tx.select({ mine: count() }).from(t.adminUnlockAttempts)
+      .where(and(recentFailures, eq(t.adminUnlockAttempts.userId, user.uid)));
+    const [{ all }] = await tx.select({ all: count() }).from(t.adminUnlockAttempts).where(recentFailures);
+    if (mine >= PIN_MAX_FAILURES || all >= PIN_MAX_FAILURES_GLOBAL) return null;
     const valid = verifyPin(pin, env.ADMIN_PIN_HASH);
     await tx.insert(t.adminUnlockAttempts).values({ userId: user.uid, ok: valid, at: now });
     return valid;
@@ -366,7 +379,10 @@ export function importHistory(db, user, body, now) {
   });
   return mutate(db, user, async (tx, uid) => {
     await tx.delete(t.entries).where(eq(t.entries.userId, uid));
-    await tx.insert(t.entries).values(rows.map(r => ({ userId: uid, ...r })));
+    // Порциями: у Postgres лимит 65535 параметров на запрос
+    for (let i = 0; i < rows.length; i += 1000) {
+      await tx.insert(t.entries).values(rows.slice(i, i + 1000).map(r => ({ userId: uid, ...r })));
+    }
     return { imported: rows.length };
   });
 }
