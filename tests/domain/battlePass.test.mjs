@@ -62,3 +62,14 @@ describe("засчитывание заданий", () => {
     expect(completeTasks(state, [{ id: "t", xp: 100 }])).toBe(state);
   });
 });
+
+describe("несколько заданий за раз (баг: XP считался от старого значения)", () => {
+  it("XP двух заданий складывается", () => {
+    const r = completeTasks(bp({ xp: 150 }), [{ id: "a", xp: 100 }, { id: "b", xp: 50 }]);
+    expect(r).toMatchObject({ xp: 300, level: 1, completedTasks: ["a", "b"] });
+  });
+
+  it("одно и то же задание дважды в списке засчитывается один раз", () => {
+    expect(completeTasks(bp(), [{ id: "a", xp: 100 }, { id: "a", xp: 100 }]).xp).toBe(100);
+  });
+});

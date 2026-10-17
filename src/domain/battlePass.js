@@ -47,7 +47,7 @@ export function completeTasks(bp, tasks) {
   let result = bp;
   for (const task of tasks) {
     if (result.completedTasks.includes(task.id)) continue;
-    const xp = bp.xp + (task.xp || 100);
+    const xp = result.xp + (task.xp || 100);
     result = {
       ...result,
       completedTasks: [...result.completedTasks, task.id],
