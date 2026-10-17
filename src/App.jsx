@@ -1,3 +1,6 @@
+import React from "react";
+import ReactDOM from "react-dom/client";
+
 // ==== Версия приложения ====
 const APP_VERSION = "v1.3.0-beta";
 
