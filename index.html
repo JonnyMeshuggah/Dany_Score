@@ -12,16 +12,11 @@
   <!-- Styles -->
   <link rel="stylesheet" href="styles.css" />
 
-  <!-- React + Babel -->
-  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-  <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
-
   <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
- <!-- Загружаем конфиг Firebase из /api/env; app.js подключается один раз внизу страницы -->
+ <!-- Загружаем конфиг Firebase из /api/env; приложение (src/App.jsx) подключается внизу страницы -->
 <script>
   (async function(){
     try {
@@ -71,8 +66,8 @@
 
 
 
-  <!-- Основное приложение (initFirebase в app.js сам ждёт window.env) -->
-  <script type="text/babel" src="app.js"></script>
+  <!-- Основное приложение собирает Vite (initFirebase в src/App.jsx сам ждёт window.env) -->
+  <script type="module" src="/src/App.jsx"></script>
 </body>
 </html>
 

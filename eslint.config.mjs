@@ -4,15 +4,16 @@ import react from "eslint-plugin-react";
 
 export default [
   { ignores: ["node_modules/**", "backups/**", "secrets/**", ".claude/worktrees/**"] },
+  { ignores: ["dist/**"] },
   js.configs.recommended,
   {
-    // Браузерный JSX без сборки: транспилирует babel-standalone, глобалы приходят из CDN
-    files: ["app.js"],
+    // Фронтенд собирает Vite; React — из npm, firebase и db — глобалы compat-скриптов из CDN
+    files: ["src/**/*.{js,jsx}"],
     languageOptions: {
       ecmaVersion: 2022,
-      sourceType: "script",
+      sourceType: "module",
       parserOptions: { ecmaFeatures: { jsx: true } },
-      globals: { ...globals.browser, React: "readonly", ReactDOM: "readonly", firebase: "readonly", db: "readonly" }
+      globals: { ...globals.browser, firebase: "readonly", db: "readonly" }
     },
     plugins: { react },
     rules: {
