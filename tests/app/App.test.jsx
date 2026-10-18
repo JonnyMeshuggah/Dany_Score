@@ -33,7 +33,8 @@ function fakeAuth(user = USER) {
     signIn: vi.fn(async () => { const e = new Error("Firebase: Error"); e.code = "auth/invalid-credential"; throw e; }),
     register: vi.fn(),
     signOut: vi.fn(async () => listener(null)),
-    getIdToken: async () => "t"
+    getIdToken: async () => "t",
+    emit: (u) => listener(u)
   };
 }
 
@@ -117,6 +118,52 @@ describe("вход и загрузка", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Выйти" }));
     expect(await screen.findByRole("button", { name: "Войти" })).toBeTruthy();
     expect(api.lockAdmin).toHaveBeenCalled();
+  });
+});
+
+describe("смена пользователя и сессия", () => {
+  it("поздний ответ прежнего пользователя не попадает на экран нового", async () => {
+    const api = fakeApi();
+    let releaseOld;
+    api.getState
+      .mockImplementationOnce(() => new Promise(r => { releaseOld = () => r(makeState({ balance: 111 })); }))
+      .mockImplementationOnce(async () => makeState({ balance: 222 }));
+    const auth = fakeAuth();
+    renderApp({ auth, api });
+    await act(async () => auth.emit({ uid: "u2", email: "other@example.com" }));
+    expect(await screen.findByText("Баланс: 222 ₽")).toBeTruthy();
+    await act(async () => releaseOld());
+    expect(screen.getByText("Баланс: 222 ₽")).toBeTruthy();
+  });
+
+  it("повторное уведомление о том же пользователе не сбрасывает экран", async () => {
+    const auth = fakeAuth();
+    const { api } = renderApp({ auth });
+    await screen.findByText("Баланс: 1000 ₽");
+    await act(async () => auth.emit({ ...USER }));
+    expect(screen.getByText("Баланс: 1000 ₽")).toBeTruthy();
+    expect(api.getState).toHaveBeenCalledTimes(1);
+  });
+
+  it("сервер не принял вход (401) — выход", async () => {
+    const api = fakeApi();
+    api.cashOut.mockRejectedValueOnce(Object.assign(new Error("Сессия истекла — войдите снова"), { code: "unauthorized" }));
+    const { auth } = renderApp({ api });
+    fireEvent.change(await screen.findByLabelText("Сумма вывода"), { target: { value: "100" } });
+    fireEvent.click(screen.getByRole("button", { name: /Вывести/ }));
+    confirmDialog();
+    expect(await screen.findByRole("button", { name: "Войти" })).toBeTruthy();
+    expect(auth.signOut).toHaveBeenCalled();
+  });
+
+  it("второе окно поверх первого закрывает первое отказом", async () => {
+    const { api } = renderApp();
+    fireEvent.click(await screen.findByRole("button", { name: "Удалить: 17.10.2026, Алгебра" }));
+    fireEvent.click(screen.getByRole("button", { name: "Удалить: 16.10.2026, 💸 Вывод средств" }));
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    confirmDialog();
+    await waitFor(() => expect(api.deleteEntry).toHaveBeenCalledTimes(1));
+    expect(api.deleteEntry).toHaveBeenCalledWith(1);
   });
 });
 

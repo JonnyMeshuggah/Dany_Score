@@ -15,19 +15,30 @@ export function useDialogs() {
 export function DialogProvider({ children }) {
   const [dialog, setDialog] = React.useState(null);
   const [toasts, setToasts] = React.useState([]);
+  const dialogRef = React.useRef(null);
 
-  const api = React.useMemo(() => ({
-    confirm: (message, opts = {}) => new Promise(resolve => setDialog({ kind: "confirm", message, ...opts, resolve })),
-    prompt: (message, opts = {}) => new Promise(resolve => setDialog({ kind: "prompt", message, ...opts, resolve })),
-    toast: (message, kind = "info") => {
-      const id = ++toastSeq;
-      setToasts(list => [...list, { id, message, kind }]);
-      setTimeout(() => setToasts(list => list.filter(t => t.id !== id)), TOAST_MS);
-    }
-  }), []);
+  const api = React.useMemo(() => {
+    // Новое окно поверх открытого: прежнее закрывается отказом, его Promise не зависает
+    const open = (kind, message, opts) => new Promise(resolve => {
+      const prev = dialogRef.current;
+      if (prev) prev.resolve(prev.kind === "prompt" ? null : false);
+      dialogRef.current = { kind, message, ...opts, resolve };
+      setDialog(dialogRef.current);
+    });
+    return {
+      confirm: (message, opts = {}) => open("confirm", message, opts),
+      prompt: (message, opts = {}) => open("prompt", message, opts),
+      toast: (message, kind = "info") => {
+        const id = ++toastSeq;
+        setToasts(list => [...list, { id, message, kind }]);
+        setTimeout(() => setToasts(list => list.filter(t => t.id !== id)), TOAST_MS);
+      }
+    };
+  }, []);
 
   const close = (value) => {
     dialog.resolve(value);
+    dialogRef.current = null;
     setDialog(null);
   };
 

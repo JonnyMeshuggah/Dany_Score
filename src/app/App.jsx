@@ -82,20 +82,34 @@ export function App({ auth, api }) {
   const [adminOpen, setAdminOpen] = React.useState(false);
   const [quote, setQuote] = React.useState(null);
 
+  // Сессия — номер входа. Ответы на запросы прошлой сессии (выход, вход другим пользователем) отбрасываются,
+  // иначе поздний ответ показал бы чужие данные или оставил открытой админку.
+  const sessionRef = React.useRef(0);
+  const uidRef = React.useRef(undefined);
+
   React.useEffect(() => auth.onChange(u => {
     setUser(u);
+    const nextUid = u ? u.uid : null;
+    if (nextUid === uidRef.current) return; // повторное уведомление о том же пользователе
+    uidRef.current = nextUid;
+    sessionRef.current += 1;
+    busyRef.current = false;
+    setBusy(false);
     setState(null);
+    setLoadError(null);
     setAdminOpen(false);
     api.lockAdmin();
     setQuote(u ? nextQuote() : null);
   }), [auth, api]);
 
   const load = React.useCallback(async () => {
+    const session = sessionRef.current;
     setLoadError(null);
     try {
-      setState(await api.getState());
+      const next = await api.getState();
+      if (session === sessionRef.current) setState(next);
     } catch (err) {
-      setLoadError(err.message);
+      if (session === sessionRef.current) setLoadError(err.message);
     }
   }, [api]);
   const uid = user?.uid;
@@ -104,24 +118,34 @@ export function App({ auth, api }) {
   // Выполнить запрос: свежее состояние из ответа, ошибка — уведомлением. null — не получилось.
   const run = React.useCallback(async (action) => {
     if (busyRef.current) return null;
+    const session = sessionRef.current;
     busyRef.current = true;
     setBusy(true);
     try {
       const res = await action();
+      if (session !== sessionRef.current) {
+        api.lockAdmin(); // поздний ответ unlock не должен открыть админку новому пользователю
+        return null;
+      }
       if (res && typeof res === "object" && res.state) setState(res.state);
       return res ?? {};
     } catch (err) {
+      if (session !== sessionRef.current) return null;
       if (err.code === "forbidden") {
         api.lockAdmin();
         setAdminOpen(false);
       }
       toast(err.message || "Что-то пошло не так", "error");
+      // Сервер не принял вход — без выхода все следующие запросы тоже упадут
+      if (err.code === "unauthorized") auth.signOut().catch(() => {});
       return null;
     } finally {
-      busyRef.current = false;
-      setBusy(false);
+      if (session === sessionRef.current) {
+        busyRef.current = false;
+        setBusy(false);
+      }
     }
-  }, [api, toast]);
+  }, [api, auth, toast]);
 
   const ensureAdmin = async () => {
     if (api.isAdmin) return true;
