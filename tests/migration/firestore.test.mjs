@@ -190,6 +190,24 @@ describe("сверка и корректировки", () => {
     expect(p.battlePass.claims.find(c => c.rewardRef === 1).badgeNumber).toBeNull();
   });
 
+  it("номер бейджа вне smallint не проходит в план — предупреждение, бейдж не переносится", () => {
+    const data = fullUser();
+    data.battlePass.rewards[1].badgeNumber = 40000;
+    data.battlePass.badges = [2, 40000];
+    const p = plan(data, { reconcile: true });
+    expect(p.warnings.join()).toMatch(/badgeNumber «40000» некорректно/);
+    expect(p.warnings.join()).toMatch(/badges: «40000» некорректно/);
+    expect(p.battlePass.rewards[1].badgeNumber).toBeNull();
+    expect(p.battlePass.claims.every(c => c.badgeNumber === null || c.badgeNumber <= 32767)).toBe(true);
+  });
+
+  it("корректировка, которая не влезет в integer, — ошибка даже с --reconcile", () => {
+    const p = plan({ ...fullUser(), balance: 3_000_000_000 }, { reconcile: true });
+    expect(p.errors.join()).toMatch(/расхождение баланса [-\d]+ вне допустимого диапазона/);
+    expect(p.blocked).toBe(true);
+    expect(p.entries.some(e => e.subject === CORRECTION_SUBJECT)).toBe(false);
+  });
+
   it("бэкап без collections.users — понятная ошибка; другие коллекции — в заметках", () => {
     expect(() => planDump({ collections: {} })).toThrow(/collections\.users/);
     const d = planDump({ collections: { users: [], logs: [] } }, { now: NOW });

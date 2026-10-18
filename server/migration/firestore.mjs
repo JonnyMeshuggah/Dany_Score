@@ -28,6 +28,8 @@ function toInt(value) {
   const n = typeof value === "string" && value.trim() !== "" ? Number(value) : value;
   return typeof n === "number" && Number.isInteger(n) && Math.abs(n) <= INT4_MAX ? n : null;
 }
+// Номер бейджа — smallint в Postgres
+const toSmallInt = (value) => { const n = toInt(value); return n !== null && Math.abs(n) <= 32767 ? n : null; };
 
 function toNumber(value) {
   const n = typeof value === "string" && value.trim() !== "" ? Number(value) : value;
@@ -151,7 +153,7 @@ function planBattlePass(bp, errors, warnings) {
     rewardByKey.set(key, rewards.length);
     const amount = orDefault(`${where}.amount`, x.amount, toInt(x.amount), null);
     if (x.type === "money" && !amount) warnings.push(`${where}: денежная награда без суммы — при получении денег не даст`);
-    const badgeNumber = orDefault(`${where}.badgeNumber`, x.badgeNumber, toInt(x.badgeNumber), null);
+    const badgeNumber = orDefault(`${where}.badgeNumber`, x.badgeNumber, toSmallInt(x.badgeNumber), null);
     rewards.push({ level, text: text(x.text), type: text(x.type), amount, badgeNumber });
   });
 
@@ -166,7 +168,9 @@ function planBattlePass(bp, errors, warnings) {
     }
   }
 
-  const storedBadges = [...new Set(list("badges").map(toInt).filter(n => n !== null))].sort((a, b) => a - b);
+  const rawBadges = list("badges");
+  for (const b of rawBadges) if (toSmallInt(b) === null) warnings.push(`battlePass.badges: «${b}» некорректно — не переносится`);
+  const storedBadges = [...new Set(rawBadges.map(toSmallInt).filter(n => n !== null))].sort((a, b) => a - b);
   const claims = [], claimed = new Set();
   for (const id of list("claimedRewards")) {
     const ref = rewardByKey.get(String(id));
@@ -233,6 +237,13 @@ export function planUser(doc, { now = new Date(), reconcile = false } = {}) {
     const claimedBadges = new Set(bp.claims.map(c => c.badgeNumber));
     missingBadges = bp.storedBadges.filter(b => !claimedBadges.has(b));
     if (missingBadges.length) mismatches.badges = { missing: missingBadges };
+  }
+  // Корректировка должна влезть в колонки integer — иначе --apply упал бы посреди записи
+  if (mismatches.balance && Math.abs(storedBalance - computedBalance) > MAX_AMOUNT) {
+    errors.push(`расхождение баланса ${storedBalance - computedBalance} вне допустимого диапазона`);
+  }
+  if (mismatches.xp && Math.abs(mismatches.xp.stored - mismatches.xp.computed) > INT4_MAX) {
+    errors.push(`расхождение XP ${mismatches.xp.stored - mismatches.xp.computed} вне допустимого диапазона`);
   }
   const hasMismatch = Object.keys(mismatches).length > 0;
 
