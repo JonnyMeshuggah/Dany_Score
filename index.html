@@ -112,8 +112,9 @@
     })();
   </script>
 
-  <!-- Основное приложение собирает Vite (initFirebase в src/App.jsx сам ждёт window.env) -->
-  <script type="module" src="/src/App.jsx"></script>
+  <!-- Основное приложение собирает Vite. src/main.js ждёт window.env и по DATA_BACKEND запускает
+       приложение на API (src/app/) или прежнее на Firestore (src/App.jsx) -->
+  <script type="module" src="/src/main.js"></script>
 </body>
 </html>
 

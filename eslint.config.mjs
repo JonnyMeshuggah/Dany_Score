@@ -24,6 +24,18 @@ export default [
     }
   },
   {
+    // Тесты экранов (jsdom): JSX, браузер и Node
+    files: ["tests/**/*.jsx"],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: "module",
+      parserOptions: { ecmaFeatures: { jsx: true } },
+      globals: { ...globals.browser, ...globals.node }
+    },
+    plugins: { react },
+    rules: { "react/jsx-uses-vars": "error", "react/jsx-uses-react": "error" }
+  },
+  {
     files: ["env.js"],
     languageOptions: { sourceType: "script", globals: globals.browser }
   },

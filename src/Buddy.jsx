@@ -63,10 +63,12 @@ export default function Buddy({ event }){
   const mountEvent = React.useRef(event);   // событие, бывшее до появления дроида (например, от прошлого входа), — не наше
   const prevIndex = React.useRef({});
   const timers = React.useRef([]);
+  const spoke = React.useRef(false);
 
   const say = React.useCallback((kind, vars, nextMood) => {
     const { text, index } = pickLine(kind, vars, prevIndex.current[kind]);
     prevIndex.current[kind] = index;
+    spoke.current = true;
     timers.current.forEach(clearTimeout);
     setLine({ text, key: Date.now() });
     setMood(nextMood);
@@ -79,9 +81,11 @@ export default function Buddy({ event }){
 
   React.useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
-  // Приветствие при входе — чуть позже цитаты, чтобы не появлялись одновременно
+  // Приветствие при входе — чуть позже цитаты, чтобы не появлялись одновременно; не перебивает уже сказанное
   React.useEffect(() => {
-    const t = setTimeout(() => say("greet", { hello: greeting(new Date().getHours()) }, "wave"), 1200);
+    const t = setTimeout(() => {
+      if (!spoke.current) say("greet", { hello: greeting(new Date().getHours()) }, "wave");
+    }, 1200);
     return () => clearTimeout(t);
   }, [say]);
 
@@ -104,7 +108,7 @@ export default function Buddy({ event }){
 
   return (
     <div className={`buddy buddy--${mood}`}>
-      <div className="buddy-say" role="status" aria-live="polite">
+      <div className="buddy-say" aria-live="polite">
         {line && (
           <div className="buddy-bubble" key={line.key}>
             <div className="buddy-name">{BUDDY_NAME}</div>
