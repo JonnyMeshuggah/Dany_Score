@@ -136,6 +136,23 @@ describe("смена пользователя и сессия", () => {
     expect(screen.getByText("Баланс: 222 ₽")).toBeTruthy();
   });
 
+  it("начальная загрузка, пришедшая после мутации, не откатывает экран", async () => {
+    const api = fakeApi();
+    let releaseLoad;
+    api.getState.mockImplementationOnce(() => new Promise(r => { releaseLoad = () => r(makeState({ balance: 1000 })); }));
+    api.importHistory.mockResolvedValueOnce({ imported: 1, state: makeState({ balance: 777 }) });
+    renderApp({ api });
+    // Импорт из боковой панели, пока первая загрузка ещё идёт
+    fireEvent.change(document.getElementById("importFile"), { target: { files: [new File(["x"], "h.csv")] } });
+    fireEvent.change(within(await screen.findByRole("dialog")).getByLabelText("Введите PIN администратора"), { target: { value: "123456" } });
+    confirmDialog();
+    await screen.findByText("Загрузить историю из файла и заменить текущую?");
+    confirmDialog();
+    expect(await screen.findByText("Баланс: 777 ₽")).toBeTruthy();
+    await act(async () => releaseLoad());
+    expect(screen.getByText("Баланс: 777 ₽")).toBeTruthy();
+  });
+
   it("повторное уведомление о том же пользователе не сбрасывает экран", async () => {
     const auth = fakeAuth();
     const { api } = renderApp({ auth });

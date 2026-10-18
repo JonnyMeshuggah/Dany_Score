@@ -102,14 +102,23 @@ export function App({ auth, api }) {
     setQuote(u ? nextQuote() : null);
   }), [auth, api]);
 
+  // Номер последнего запроса состояния: загрузка, начатая раньше мутации или повторной загрузки,
+  // не перетирает более свежее состояние
+  const stateSeqRef = React.useRef(0);
+  const applyState = (next) => {
+    stateSeqRef.current += 1;
+    setState(next);
+  };
+
   const load = React.useCallback(async () => {
     const session = sessionRef.current;
+    const seq = ++stateSeqRef.current;
     setLoadError(null);
     try {
       const next = await api.getState();
-      if (session === sessionRef.current) setState(next);
+      if (session === sessionRef.current && seq === stateSeqRef.current) setState(next);
     } catch (err) {
-      if (session === sessionRef.current) setLoadError(err.message);
+      if (session === sessionRef.current && seq === stateSeqRef.current) setLoadError(err.message);
     }
   }, [api]);
   const uid = user?.uid;
@@ -123,11 +132,9 @@ export function App({ auth, api }) {
     setBusy(true);
     try {
       const res = await action();
-      if (session !== sessionRef.current) {
-        api.lockAdmin(); // поздний ответ unlock не должен открыть админку новому пользователю
-        return null;
-      }
-      if (res && typeof res === "object" && res.state) setState(res.state);
+      // Пользователь сменился — ответ не его (поздний unlock токен уже не ставит, см. api.js)
+      if (session !== sessionRef.current) return null;
+      if (res && typeof res === "object" && res.state) applyState(res.state);
       return res ?? {};
     } catch (err) {
       if (session !== sessionRef.current) return null;

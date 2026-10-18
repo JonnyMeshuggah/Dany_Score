@@ -24,6 +24,8 @@ const MESSAGES = {
 
 export function createApi({ getIdToken, fetchImpl = (...args) => fetch(...args) }) {
   let adminToken = null;
+  // Растёт при каждом lockAdmin: ответ unlock, отправленного до закрытия (выход, смена пользователя), токен не ставит
+  let adminEpoch = 0;
 
   async function request(method, path, { body, admin = false, raw = false } = {}) {
     let idToken;
@@ -60,10 +62,14 @@ export function createApi({ getIdToken, fetchImpl = (...args) => fetch(...args) 
 
   return {
     get isAdmin() { return adminToken !== null; },
-    lockAdmin() { adminToken = null; },
+    lockAdmin() {
+      adminToken = null;
+      adminEpoch += 1;
+    },
     async unlockAdmin(pin) {
+      const epoch = adminEpoch;
       const res = await request("POST", "/api/admin/unlock", { body: { pin } });
-      adminToken = res.token;
+      if (epoch === adminEpoch) adminToken = res.token;
       return res;
     },
 

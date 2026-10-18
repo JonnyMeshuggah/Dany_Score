@@ -91,6 +91,18 @@ describe("админка", () => {
     expect(api.isAdmin).toBe(false);
   });
 
+  it("ответ unlock после lockAdmin (выход во время запроса) токен не ставит", async () => {
+    let release;
+    const fetchImpl = vi.fn(() => new Promise(r => { release = () => r(json(200, { token: "old" })); }));
+    const api = createApi({ getIdToken: async () => "t", fetchImpl });
+    const pending = api.unlockAdmin("123456");
+    await vi.waitFor(() => expect(fetchImpl).toHaveBeenCalled());
+    api.lockAdmin();
+    release();
+    await pending;
+    expect(api.isAdmin).toBe(false);
+  });
+
   it("lockAdmin закрывает админку", async () => {
     const { api } = setup([json(200, { token: "adm" })]);
     await api.unlockAdmin("123456");
