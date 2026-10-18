@@ -7,22 +7,33 @@
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <meta name="theme-color" content="#0B2850">
+  <script>
+    try {
+      var t = localStorage.getItem('theme');
+      if (t === 'dark' || t === 'light') document.documentElement.dataset.theme = t;
+    } catch (e) { /* без localStorage — тема по системе */ }
+  </script>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
+    :root { color-scheme: light; --bg: #f5f5f5; --text: #212121; --accent: #6200ea; }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) { color-scheme: dark; --bg: #121212; --text: #e6e6e6; --accent: #bb86fc; }
+    }
+    :root[data-theme="dark"] { color-scheme: dark; --bg: #121212; --text: #e6e6e6; --accent: #bb86fc; }
     body {
       font-family: 'Roboto', sans-serif;
       max-width: 800px;
       margin: 0 auto;
       padding: 20px;
       line-height: 1.6;
-      background: #f5f5f5;
-      color: #212121;
+      background: var(--bg);
+      color: var(--text);
     }
-    h1 { color: #6200ea; }
+    h1 { color: var(--accent); }
     .back {
       display: inline-block;
       margin-bottom: 20px;
-      color: #6200ea;
+      color: var(--accent);
       text-decoration: none;
       font-weight: 500;
     }

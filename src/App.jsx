@@ -668,7 +668,7 @@ function App(){
 
      {!user ? (
   <div className="card auth-card" style={{textAlign: 'center'}}>
-    <img src="logo.png" alt="Логотип" style={{width: '160px', marginBottom: '16px'}} />
+    <img src="logo.png" alt="Логотип" className="theme-logo" style={{width: '160px', marginBottom: '16px'}} />
     <h2>Вход / Регистрация</h2>
           <div className="auth-fields">
             <input placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} />
@@ -738,6 +738,7 @@ function App(){
                     key={num}
                     src={isActivated ? `badges/${num}.png` : `badges/${num}G.png`}
                     alt={`Бейдж ${num}`}
+                    className="badge-img"
                     style={{
                       flex: '1 1 0',
                       minWidth: '50px',
@@ -972,7 +973,7 @@ function App(){
                 <h4>🎯 Задания</h4>
                 <ul className="admin-list">
                   {battlePass.tasks.length === 0 ? (
-                    <li style={{color: '#999'}}>Заданий пока нет</li>
+                    <li style={{color: 'var(--md-text-faint)'}}>Заданий пока нет</li>
                   ) : (
                     battlePass.tasks.map(task => (
                       <li key={task.id}>
@@ -1024,7 +1025,7 @@ function App(){
                 <h4>🎁 Награды</h4>
                 <ul className="admin-list">
                   {battlePass.rewards.length === 0 ? (
-                    <li style={{color: '#999'}}>Наград пока нет</li>
+                    <li style={{color: 'var(--md-text-faint)'}}>Наград пока нет</li>
                   ) : (
                     battlePass.rewards.map(reward => (
                       <li key={reward.id}>
