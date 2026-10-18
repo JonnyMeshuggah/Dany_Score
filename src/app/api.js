@@ -86,6 +86,7 @@ export function createApi({ getIdToken, fetchImpl = (...args) => fetch(...args) 
     importHistory: (csv) => asAdmin("POST", "/api/admin/import", { csv }),
     updateSeason: (season) => asAdmin("PUT", "/api/admin/season", season),
     resetSeason: () => asAdmin("POST", "/api/admin/season/reset", {}),
+    launchPresetSeason: () => asAdmin("POST", "/api/admin/season/launch", {}),
     addTask: (task) => asAdmin("POST", "/api/admin/tasks", task),
     deleteTask: (id) => asAdmin("DELETE", `/api/admin/tasks/${encodeURIComponent(id)}`),
     addReward: (reward) => asAdmin("POST", "/api/admin/rewards", reward),

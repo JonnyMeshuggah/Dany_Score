@@ -140,4 +140,48 @@ describe("сезон", () => {
     expect(res.body.state.battlePass).toMatchObject({ xp: 0, level: 0, tasks: [], rewards: [], completedTasks: [], claimedRewards: [], badges: [] });
     expect(res.body.state.balance).toBe(750);
   });
+
+  it("запуск сезона «Пробуждение Силы знаний»: следующий номер, задания и награды пресета, прогресс с нуля", async () => {
+    const { call, as } = await adminUser();
+    await as("POST", "/api/admin/tasks", { name: "Пятёрка", xp: 250, type: "streak_fives", target: 1 });
+    const badge = await as("POST", "/api/admin/rewards", { level: 1, text: "Бейдж", type: "badge", badgeNumber: 2 });
+    await add(call, "А", 5);
+    await call("POST", `/api/bp/rewards/${badge.body.id}/claim`);
+
+    const res = await as("POST", "/api/admin/season/launch");
+    expect(res.status).toBe(200);
+    const bp = res.body.state.battlePass;
+    expect(bp).toMatchObject({
+      season: 2, seasonName: "Пробуждение Силы знаний", maxLevel: 10, xpPerLevel: 200,
+      xp: 0, level: 0, completedTasks: [], claimedRewards: [], badges: []
+    });
+    expect(bp.tasks).toHaveLength(11);
+    expect(bp.rewards).toHaveLength(11);
+    expect(bp.tasks[0]).toMatchObject({ name: "Первый выстрел: 2 пятёрки подряд", type: "streak_fives", target: 2, xp: 100 });
+    expect(bp.rewards.find(r => r.text === "💰 500 ₽")).toMatchObject({ level: 1, type: "money", amount: 500 });
+    expect(bp.rewards.find(r => r.text === "Бейдж «Дарт Вейдер»")).toMatchObject({ level: 10, type: "badge", badgeNumber: 5 });
+    // Деньги и история не трогаются
+    expect(res.body.state.balance).toBe(250);
+    expect(res.body.state.history).toHaveLength(1);
+  });
+
+  it("задания нового сезона засчитываются, второй запуск — 409", async () => {
+    const { call, as } = await adminUser();
+    // Цели по среднему считаются от истории. При пустой истории это 5.0 — их закрыла бы первая же пятёрка
+    // (так и в Firestore-версии); с четвёркой в истории двух пятёрок для них мало
+    await add(call, "А", 4, "2026-10-01");
+    await as("POST", "/api/admin/season/launch");
+    await add(call, "А", 5);
+    const res = await add(call, "Б", 5); // «2 пятёрки подряд»
+    expect(res.body.completedTasks).toHaveLength(1);
+    expect(res.body.state.battlePass.xp).toBe(100);
+    const again = await as("POST", "/api/admin/season/launch");
+    expect(again.status).toBe(409);
+    expect(again.body.message).toMatch(/уже запущен/);
+  });
+
+  it("без PIN запуск сезона недоступен", async () => {
+    const call = clientFor(app, newUid());
+    expect((await call("POST", "/api/admin/season/launch")).status).toBe(403);
+  });
 });

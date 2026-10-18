@@ -39,6 +39,7 @@ export function createApp({ withDb, verifyToken, env, now = () => new Date() }) 
     ["POST", "/api/admin/import", admin(json((db, u, req) => s.importHistory(db, u, req.body, now())))],
     ["PUT", "/api/admin/season", admin(json((db, u, req) => s.updateSeason(db, u, req.body)))],
     ["POST", "/api/admin/season/reset", admin(json((db, u) => s.resetSeason(db, u)))],
+    ["POST", "/api/admin/season/launch", admin(json((db, u) => s.launchPresetSeason(db, u)))],
     ["POST", "/api/admin/tasks", admin(json((db, u, req) => s.addTask(db, u, req.body)))],
     ["DELETE", "/api/admin/tasks/:id", admin(json((db, u, req, p) => s.deleteTask(db, u, p.id)))],
     ["POST", "/api/admin/rewards", admin(json((db, u, req) => s.addReward(db, u, req.body)))],

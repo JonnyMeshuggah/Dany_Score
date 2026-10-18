@@ -344,6 +344,21 @@ describe("админка и боковая панель", () => {
     expect(api.adminBonus).toHaveBeenCalledWith(500);
   });
 
+  it("запуск сезона: кнопка, подтверждение, запрос; после запуска кнопки нет", async () => {
+    const api = fakeApi();
+    api.launchPresetSeason = vi.fn(async () => ({
+      season: 2, state: makeState({ battlePass: { ...makeState().battlePass, season: 2, seasonName: "Пробуждение Силы знаний" } })
+    }));
+    renderApp({ api });
+    await openAdmin();
+    fireEvent.click(await screen.findByRole("button", { name: "🚀 Запустить сезон «Пробуждение Силы знаний»" }));
+    expect(within(dialog()).getByText(/Баланс и история не изменятся/)).toBeTruthy();
+    fireEvent.click(within(dialog()).getByRole("button", { name: "Запустить" }));
+    await waitFor(() => expect(api.launchPresetSeason).toHaveBeenCalled());
+    await waitFor(() => expect(screen.queryByRole("button", { name: /Запустить сезон/ })).toBeNull());
+    expect(toastText()).toContain("запущен");
+  });
+
   it("неверный PIN — админка закрыта", async () => {
     renderApp();
     await openAdmin("1");
