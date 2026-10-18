@@ -7,10 +7,15 @@ const ID_PREFIX = "s2-";
 
 // Каким станет средний балл, если добавить k пятёрок. Средний считается за всё время,
 // поэтому цели идут от текущего: иначе задание засчитается на первой же оценке.
+// Не ниже показанного среднего + 0.01 (задание сравнивает с ним) и не выше 5.
 function averageTargets(history) {
-  const { stats, totalGrades } = computeGradeStats(history);
+  const { stats, totalGrades, average } = computeGradeStats(history);
   const sum = [2, 3, 4, 5].reduce((s, g) => s + g * stats[g], 0);
-  return [5, 15, 30].map(k => Math.floor(((sum + 5 * k) / (totalGrades + k)) * 100) / 100);
+  const floor = Math.round(parseFloat(average) * 100) + 1;
+  return [5, 15, 30].map(k => {
+    const target = Math.floor(((sum + 5 * k) / (totalGrades + k)) * 100 + 1e-9);
+    return Math.min(500, Math.max(target, floor)) / 100;
+  });
 }
 
 export function isPresetLoaded(bp) {

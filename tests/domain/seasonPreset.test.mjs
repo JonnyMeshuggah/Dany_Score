@@ -50,6 +50,21 @@ describe("пресет сезона", () => {
     expect(done.filter(t => t.type === "average_score")).toEqual([]);
   });
 
+  it("средний 4.996 показывается как 5.00 — цели 5, обычная оценка их не выполняет", () => {
+    const nearPerfect = [4, ...Array(249).fill(5)].map(grade);
+    const bp = loadSeasonPreset(oldBp, nearPerfect);
+    expect(bp.tasks.filter(t => t.type === "average_score").map(t => t.target)).toEqual([5, 5, 5]);
+    const done = findCompletedTasks(bp, [grade(4, 999), ...nearPerfect], new Date(2026, 9, 1));
+    expect(done.filter(t => t.type === "average_score")).toEqual([]);
+  });
+
+  it("цель выше показанного среднего даже при округлении: 4.666… → не 4.66", () => {
+    // 14 оценок по 5 и 7 по 4: средний 4.666… показывается как 4.67
+    const h = [...Array(14).fill(5), ...Array(7).fill(4)].map(grade);
+    const targets = loadSeasonPreset(oldBp, h).tasks.filter(t => t.type === "average_score").map(t => t.target);
+    expect(Math.min(...targets)).toBeGreaterThan(4.67);
+  });
+
   it("без оценок цели — 5", () => {
     const targets = loadSeasonPreset(oldBp, []).tasks.filter(t => t.type === "average_score").map(t => t.target);
     expect(targets).toEqual([5, 5, 5]);

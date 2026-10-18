@@ -368,7 +368,8 @@ function App(){
   };
 
   // ---- BP Admin функции
-  const saveBattlePass = async () => {
+  // bp — состояние для записи; по умолчанию текущее (запуск сезона передаёт новое, ещё не применённое)
+  const saveBattlePass = async (bp = battlePass) => {
     if(!user) return;
 
     try {
@@ -376,17 +377,17 @@ function App(){
       // Это создаст поля если их нет, или обновит если они существуют
       const dataToSave = {
         battlePass: {
-          season: battlePass.season,
-          seasonName: battlePass.seasonName,
-          maxLevel: battlePass.maxLevel,
-          xpPerLevel: battlePass.xpPerLevel,
-          tasks: battlePass.tasks,
-          rewards: battlePass.rewards,
-          xp: battlePass.xp,
-          level: battlePass.level,
-          completedTasks: battlePass.completedTasks,
-          claimedRewards: battlePass.claimedRewards,
-          badges: battlePass.badges
+          season: bp.season,
+          seasonName: bp.seasonName,
+          maxLevel: bp.maxLevel,
+          xpPerLevel: bp.xpPerLevel,
+          tasks: bp.tasks,
+          rewards: bp.rewards,
+          xp: bp.xp,
+          level: bp.level,
+          completedTasks: bp.completedTasks,
+          claimedRewards: bp.claimedRewards,
+          badges: bp.badges
         }
       };
 
@@ -528,13 +529,14 @@ function App(){
     alert("✅ Боевой пропуск сброшен!");
   };
 
-  // Готовый сезон: заполняет состояние, в базу пишет кнопка «Сохранить»
+  // Готовый сезон — сразу в базу: иначе snapshot до «Сохранить» вернул бы старый сезон
   const launchPresetSeason = () => {
     if(!confirm(`Запустить сезон «${PRESET_NAME}»? Задания, награды, уровень и бейджи текущего сезона заменятся. Баланс и история не изменятся.`)) return;
     console.log("Боевой пропуск до запуска сезона:", JSON.stringify(battlePass));
-    setBattlePass(prev => loadSeasonPreset(prev, history));
+    const next = loadSeasonPreset(battlePass, history);
+    setBattlePass(next);
     setBpUnsavedChanges(true);
-    alert("✅ Сезон загружен. Нажмите «Сохранить», чтобы записать его.");
+    saveBattlePass(next);
   };
 
   // ---- App logic
@@ -1153,7 +1155,7 @@ function App(){
 
               <div className="section" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: "20px", gap: '12px' }}>
                 <button
-                  onClick={saveBattlePass}
+                  onClick={() => saveBattlePass()}
                   style={{
                     background: bpUnsavedChanges ? '#2196f3' : '#4caf50',
                     flex: '1',
