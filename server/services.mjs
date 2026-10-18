@@ -133,7 +133,7 @@ async function lockUser(tx, user) {
   await tx.select({ id: t.users.id }).from(t.users).where(eq(t.users.id, user.uid)).for("update");
 }
 
-async function buildState(tx, uid) {
+export async function buildState(tx, uid) {
   const history = await loadHistory(tx, uid);
   const battlePass = await loadBattlePass(tx, uid);
   delete battlePass.seasonId; // внутренний id, клиенту не нужен

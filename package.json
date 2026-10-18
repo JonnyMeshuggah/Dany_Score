@@ -15,6 +15,7 @@
     "probe:rules": "node scripts/probe-firestore-rules.mjs",
     "db:generate": "drizzle-kit generate --config drizzle.config.mjs",
     "db:migrate": "node scripts/db-migrate.mjs",
+    "db:import-firestore": "node scripts/import-firestore.mjs",
     "admin:hash-pin": "node scripts/hash-pin.mjs",
     "prepare": "git config core.hooksPath .githooks || true"
   },
