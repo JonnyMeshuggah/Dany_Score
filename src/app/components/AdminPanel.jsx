@@ -2,7 +2,7 @@
 // запросы — с токеном админки, полученным по PIN.
 import React from "react";
 import { TASK_TYPES, parseAmount } from "../constants.js";
-import { PRESET_NAME } from "../../domain/seasonPreset.js";
+import { PRESET_NAME, isPresetSeason } from "../../domain/seasonPreset.js";
 
 const del = (onClick, label, busy) => (
   <button className="text-btn" onClick={onClick} disabled={busy} aria-label={label} style={{ marginLeft: "8px" }}>
@@ -111,7 +111,7 @@ export function AdminPanel({ bp, busy, run, api, dialogs, onClose }) {
           <span className="muted" style={{ fontSize: "13px" }}>Сезон #{bp.season}</span>
           <button type="submit" disabled={busy || seasonName.trim() === bp.seasonName}>Сохранить</button>
         </div>
-        {bp.seasonName !== PRESET_NAME && (
+        {!isPresetSeason(bp) && (
           <button type="button" onClick={launchPreset} disabled={busy} style={{ marginTop: "8px", width: "100%" }}>
             🚀 Запустить сезон «{PRESET_NAME}»
           </button>

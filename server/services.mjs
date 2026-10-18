@@ -7,7 +7,7 @@ import * as t from "./db/schema.mjs";
 import { applyGrade } from "../src/domain/grades.js";
 import { recalculateHistory, computeBalance } from "../src/domain/rewards.js";
 import { levelFromXP } from "../src/domain/battlePass.js";
-import { loadSeasonPreset, PRESET_NAME } from "../src/domain/seasonPreset.js";
+import { loadSeasonPreset, isPresetSeason, PRESET_NAME } from "../src/domain/seasonPreset.js";
 import { isoToRuDate, compareNewestFirst } from "../src/domain/dates.js";
 import { historyToCSV, parseHistoryCSV } from "../src/domain/csv.js";
 import { verifyPin, issueAdminToken, ADMIN_TOKEN_TTL_SEC } from "./auth.mjs";
@@ -363,11 +363,11 @@ export function resetSeason(db, user) {
 
 // Запуск готового сезона «Пробуждение Силы знаний» (src/domain/seasonPreset.js) одной транзакцией:
 // прежний сезон уходит в архив вместе со своими отметками, новый — активный, прогресс с нуля.
-// Баланс и история не меняются. Признак запущенного сезона — его название (id заданий в БД свои).
+// Баланс и история не меняются. Признак запущенного сезона — isPresetSeason (название или задания пресета).
 export function launchPresetSeason(db, user) {
   return mutate(db, user, async (tx, uid) => {
     const bp = await loadBattlePass(tx, uid);
-    if (bp.seasonName === PRESET_NAME) throw conflict(`Сезон «${PRESET_NAME}» уже запущен`);
+    if (isPresetSeason(bp)) throw conflict(`Сезон «${PRESET_NAME}» уже запущен`);
     const next = loadSeasonPreset(bp, await loadHistory(tx, uid));
     await tx.update(t.bpSeasons).set({ isActive: false })
       .where(and(eq(t.bpSeasons.userId, uid), eq(t.bpSeasons.isActive, true)));
