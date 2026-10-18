@@ -95,11 +95,49 @@ describe("разбор документа", () => {
     expect(plan({ balance: 0, history: { 0: {} } }).errors).toContain("history: не массив");
   });
 
-  it("без battlePass — сезон по умолчанию; без balance — 0 с предупреждением", () => {
+  it("без battlePass и balance при пустой истории — сезон по умолчанию, баланс 0", () => {
     const p = plan({ history: [] });
     expect(p.battlePass.season).toMatchObject({ number: 1, maxLevel: 10, xpPerLevel: 200 });
     expect(p.blocked).toBe(false);
-    expect(p.warnings.join()).toMatch(/balance/);
+    expect(p.expected.balance).toBe(0);
+  });
+
+  it("без balance при непустой истории — ошибка, --reconcile её не закрывает", () => {
+    const data = { ...fullUser(), balance: undefined };
+    for (const reconcile of [false, true]) {
+      const p = plan(data, { reconcile });
+      expect(p.errors.join()).toMatch(/balance/);
+      expect(p.blocked).toBe(true);
+      expect(p.entries.some(e => e.subject === CORRECTION_SUBJECT)).toBe(false);
+    }
+  });
+
+  it("повтор id в дне: ключи раздвигаются в порядке UI, с предупреждением; id «12abc» читается как 12", () => {
+    const p = plan({
+      balance: 0,
+      history: [
+        { id: "500", date: "16.10.2026", subject: "А", reward: 0 },
+        { id: "500", date: "16.10.2026", subject: "Б", reward: 0 },
+        { id: "12abc", date: "16.10.2026", subject: "В", reward: 0 }
+      ]
+    });
+    expect(p.entries.map(e => e.sortKey)).toEqual([501, 500, 12]);
+    expect(p.warnings.join()).toMatch(/повтор id 500/);
+    expect(p.warnings.join()).toMatch(/«12abc» читается как 12/);
+  });
+
+  it("некорректные поля боевого пропуска заменяются с предупреждением", () => {
+    const data = fullUser();
+    Object.assign(data.battlePass, { xpPerLevel: "много", season: "x" });
+    data.battlePass.tasks[0].target = "три";
+    Object.assign(data.battlePass.rewards[0], { amount: "пятьсот" });
+    const p = plan(data);
+    const w = p.warnings.join("\n");
+    expect(w).toMatch(/xpPerLevel «много» некорректно — будет 200/);
+    expect(w).toMatch(/season «x» некорректно — будет 1/);
+    expect(w).toMatch(/tasks\[0\]\.target «три»/);
+    expect(w).toMatch(/rewards\[0\]\.amount «пятьсот»/);
+    expect(w).toMatch(/денежная награда без суммы/);
   });
 });
 
@@ -151,6 +189,11 @@ describe("сверка и корректировки", () => {
     expect(() => planDump({ collections: {} })).toThrow(/collections\.users/);
     const d = planDump({ collections: { users: [], logs: [] } }, { now: NOW });
     expect(d.notes).toEqual(["коллекция logs не переносится"]);
+  });
+
+  it("один uid дважды в бэкапе — оба заблокированы", () => {
+    const d = planDump({ collections: { users: [{ id: "a", data: fullUser() }, { id: "a", data: fullUser() }] } }, { now: NOW });
+    expect(d.users.every(p => p.blocked && /2 раза/.test(p.errors.join()))).toBe(true);
   });
 });
 
@@ -218,6 +261,16 @@ describe("запись в Postgres", () => {
     p.expected.balance = 42; // имитация ошибки переноса
     await expect(applyUser(env.db, p)).rejects.toThrow(/откат/);
     expect((await stateOf("m-rollback")).balance).toBe(800);
+  });
+
+  it("сверка ловит неверный порядок записей и изменённое задание", async () => {
+    const p = planUser({ id: "m-order", data: fullUser() }, { now: NOW });
+    p.expected.entries.reverse();
+    await expect(applyUser(env.db, p)).rejects.toThrow(/запись №1 новыми сверху/);
+
+    const q = planUser({ id: "m-order", data: fullUser() }, { now: NOW });
+    q.battlePass.tasks[0].xp = 999; // записано не то, что ожидалось
+    await expect(applyUser(env.db, q)).rejects.toThrow(/задания/);
   });
 });
 

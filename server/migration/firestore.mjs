@@ -48,11 +48,15 @@ function planEntries(history, errors, warnings) {
     if (reward === null) return errors.push(`${where} (${h.date}, ${subject}): сумма «${h.reward}» не целое число`);
     if (Math.abs(reward) > MAX_AMOUNT) return errors.push(`${where} (${h.date}, ${subject}): сумма ${reward} вне диапазона`);
     if (typeof h.reward !== "number") warnings.push(`${where} (${h.date}, ${subject}): сумма-строка «${h.reward}» → ${reward}`);
+    if (!subject) warnings.push(`${where} (${h.date}): нет предмета`);
     const g = toInt(h.grade);
     const numeric = [2, 3, 4, 5].includes(g);
-    const id = /^\d+$/.test(String(h.id ?? "")) ? Number(h.id) : null;
+    // Как compareNewestFirst в src/domain/dates.js: parseInt(id) || 0
+    const id = parseInt(h.id) || 0;
+    if (h.id != null && String(id) !== String(h.id)) warnings.push(`${where} (${h.date}, ${subject}): id «${h.id}» читается как ${id}`);
     rows.push({
-      id: Number.isSafeInteger(id) && id > 0 ? id : null,
+      id: Number.isSafeInteger(id) && id > 0 ? id : 0,
+      index: i,
       date,
       kind: kindForSubject(subject),
       subject,
@@ -63,14 +67,28 @@ function planEntries(history, errors, warnings) {
     });
   });
 
-  // Порядок внутри дня задавал id-таймштамп. Записи без id (выводы) UI ставил в начало дня
-  // (parseInt → 0) в порядке массива, новые сверху. Им — малые sortKey с тем же порядком:
-  // меньше любого таймштампа, первая в массиве — наибольшая.
-  const withoutId = new Map();
-  for (const r of rows) if (r.id === null) withoutId.set(r.date, [...(withoutId.get(r.date) ?? []), r]);
-  for (const list of withoutId.values()) list.forEach((r, i) => { r.id = list.length - i; });
+  // Порядок внутри дня в UI: id-таймштамп по убыванию, при равных (в т.ч. записи без id — выводы,
+  // id 0) — порядок массива, новые сверху. В Neon порядок задаёт только sortKey, поэтому ключи дня
+  // строго возрастают снизу вверх: sortKey = max(id, ключ записи ниже + 1). Уникальные id сохраняются,
+  // записи без id получают 1, 2, …, повторы раздвигаются (с предупреждением).
+  const byDay = new Map();
+  for (const r of rows) byDay.set(r.date, [...(byDay.get(r.date) ?? []), r]);
+  for (const day of byDay.values()) {
+    day.sort((a, b) => b.id - a.id || a.index - b.index);
+    let below = 0;
+    for (let i = day.length - 1; i >= 0; i--) {
+      const r = day[i];
+      r.sortKey = Math.max(r.id, below + 1);
+      if (r.id > 0 && r.sortKey !== r.id) warnings.push(`history[${r.index}] (${r.subject}): повтор id ${r.id} в дне — порядок сохранён`);
+      below = r.sortKey;
+    }
+  }
 
-  return rows.map(({ id, ...r }) => ({ ...r, sortKey: id }));
+  for (const r of rows) {
+    delete r.id;
+    delete r.index;
+  }
+  return rows;
 }
 
 // ---- battlePass → сезон, задания, награды, отметки. Ссылки — индексы в tasks/rewards.
@@ -82,13 +100,20 @@ function planBattlePass(bp, errors, warnings) {
     errors.push("battlePass: не объект");
     return null;
   }
+  // Некорректное значение заменяется — с предупреждением; отсутствующее — молча
+  const orDefault = (where, value, parsed, fallback) => {
+    if (parsed !== null) return parsed;
+    if (value != null && value !== "") warnings.push(`${where} «${value}» некорректно — будет ${fallback}`);
+    return fallback;
+  };
   // Как в src/App.jsx: недостающие поля берутся из начального состояния
   const xpPerLevel = toInt(bp.xpPerLevel);
   const season = {
-    number: toInt(bp.season) ?? DEFAULT_SEASON.number,
-    name: typeof bp.seasonName === "string" ? bp.seasonName : DEFAULT_SEASON.name,
-    maxLevel: toInt(bp.maxLevel) ?? DEFAULT_SEASON.maxLevel,
-    xpPerLevel: xpPerLevel > 0 ? xpPerLevel : DEFAULT_SEASON.xpPerLevel
+    number: orDefault("battlePass.season", bp.season, toInt(bp.season), DEFAULT_SEASON.number),
+    name: orDefault("battlePass.seasonName", bp.seasonName,
+      typeof bp.seasonName === "string" ? bp.seasonName : null, DEFAULT_SEASON.name),
+    maxLevel: orDefault("battlePass.maxLevel", bp.maxLevel, toInt(bp.maxLevel), DEFAULT_SEASON.maxLevel),
+    xpPerLevel: orDefault("battlePass.xpPerLevel", bp.xpPerLevel, xpPerLevel > 0 ? xpPerLevel : null, DEFAULT_SEASON.xpPerLevel)
   };
 
   const list = (name) => {
@@ -107,7 +132,8 @@ function planBattlePass(bp, errors, warnings) {
     if (taskByKey.has(key)) return warnings.push(`${where}: повтор id ${key} — пропущено`);
     taskByKey.set(key, tasks.length);
     // target || значение по умолчанию — как в src/domain/battlePass.js: 0 и пусто означают «по умолчанию»
-    tasks.push({ name: text(x.name), type: text(x.type), target: toNumber(x.target) || null, xp });
+    const target = orDefault(`${where}.target`, x.target, toNumber(x.target), null) || null;
+    tasks.push({ name: text(x.name), type: text(x.type), target, xp });
   });
 
   const rewards = [], rewardByKey = new Map();
@@ -118,7 +144,10 @@ function planBattlePass(bp, errors, warnings) {
     const key = String(x.id);
     if (rewardByKey.has(key)) return warnings.push(`${where}: повтор id ${key} — пропущено`);
     rewardByKey.set(key, rewards.length);
-    rewards.push({ level, text: text(x.text), type: text(x.type), amount: toInt(x.amount), badgeNumber: toInt(x.badgeNumber) });
+    const amount = orDefault(`${where}.amount`, x.amount, toInt(x.amount), null);
+    if (x.type === "money" && !amount) warnings.push(`${where}: денежная награда без суммы — при получении денег не даст`);
+    const badgeNumber = orDefault(`${where}.badgeNumber`, x.badgeNumber, toInt(x.badgeNumber), null);
+    rewards.push({ level, text: text(x.text), type: text(x.type), amount, badgeNumber });
   });
 
   const completions = [], doneTasks = new Set();
@@ -178,11 +207,12 @@ export function planUser(doc, { now = new Date(), reconcile = false } = {}) {
   const entries = planEntries(Array.isArray(rawHistory) ? rawHistory : [], errors, warnings);
   const bp = planBattlePass(data?.battlePass, errors, warnings);
 
-  // Как в src/App.jsx: баланс не-числом показывался как 0
+  // Без balance допустим только пустой документ. При непустой истории это повреждение:
+  // корректировка «до нуля» скрыла бы потерю денег, поэтому — ошибка, --reconcile её не закрывает.
   const computedBalance = entries.reduce((s, e) => s + e.reward, 0);
   let storedBalance = data?.balance;
   if (typeof storedBalance !== "number") {
-    warnings.push(`balance «${storedBalance}» не число — считается 0`);
+    if (entries.length) errors.push(`balance «${storedBalance}» не число при непустой истории`);
     storedBalance = 0;
   }
   if (!Number.isInteger(storedBalance)) errors.push(`balance ${storedBalance} не целое число`);
@@ -199,9 +229,10 @@ export function planUser(doc, { now = new Date(), reconcile = false } = {}) {
   }
   const hasMismatch = Object.keys(mismatches).length > 0;
 
-  // --reconcile: явные корректирующие записи, чтобы после переезда пользователь видел те же числа
+  // --reconcile: явные корректирующие записи, чтобы после переезда пользователь видел те же числа.
+  // При ошибках разбора не корректируем: разница может быть следствием ошибки, а не старого расхождения.
   const corrections = [];
-  if (reconcile && bp) {
+  if (reconcile && bp && !errors.length) {
     if (mismatches.balance) {
       const date = todayISO(now);
       const maxKey = entries.filter(e => e.date === date).reduce((m, e) => Math.max(m, e.sortKey), 0);
@@ -222,14 +253,17 @@ export function planUser(doc, { now = new Date(), reconcile = false } = {}) {
     }
   }
 
+  // Ожидаемое состояние — в том порядке, в каком его отдаёт API: история новыми сверху,
+  // задания по порядку добавления, награды по уровню (при равном — по порядку добавления)
   const expected = bp && {
     balance: storedBalance,
     xp: bp.storedXp,
     level: levelFromXP(bp.storedXp, bp.season),
     badges: bp.storedBadges,
-    entries: entries.map(entryFingerprint).sort(),
-    tasks: bp.tasks.length,
-    rewards: bp.rewards.length,
+    season: [bp.season.number, bp.season.name, bp.season.maxLevel, bp.season.xpPerLevel],
+    entries: [...entries].sort((a, b) => b.date.localeCompare(a.date) || b.sortKey - a.sortKey).map(entryFingerprint),
+    tasks: bp.tasks.map(taskFingerprint),
+    rewards: [...bp.rewards].sort((a, b) => a.level - b.level).map(rewardFingerprint),
     completedTasks: bp.completions.filter(c => c.taskRef !== null).length,
     claimedRewards: bp.claims.filter(c => c.rewardRef !== null).length
   };
@@ -250,13 +284,25 @@ export function planUser(doc, { now = new Date(), reconcile = false } = {}) {
 
 const entryFingerprint = (e) =>
   JSON.stringify([e.date, e.kind, e.subject, e.grade ?? e.gradeText, e.reward, e.bonusDesc]);
+const taskFingerprint = (x) => JSON.stringify([x.name, x.type, x.target ?? null, x.xp]);
+const rewardFingerprint = (x) => JSON.stringify([x.level, x.text, x.type, x.amount ?? null, x.badgeNumber ?? null]);
 
 // ---- Весь бэкап
 export function planDump(dump, options) {
   const users = dump?.collections?.users;
   if (!Array.isArray(users)) throw new Error("В файле нет collections.users — это не бэкап scripts/export-firestore.mjs?");
   const notes = Object.keys(dump.collections).filter(c => c !== "users").map(c => `коллекция ${c} не переносится`);
-  return { notes, users: users.map(doc => planUser(doc, options)) };
+  const plans = users.map(doc => planUser(doc, options));
+  // Два документа с одним uid перезаписали бы друг друга — блокируем оба
+  const seen = new Map();
+  for (const p of plans) seen.set(p.uid, (seen.get(p.uid) ?? 0) + 1);
+  for (const p of plans) {
+    if (seen.get(p.uid) > 1) {
+      p.errors.push(`uid встречается в бэкапе ${seen.get(p.uid)} раза`);
+      p.blocked = true;
+    }
+  }
+  return { notes, users: plans };
 }
 
 // ---- Запись одного пользователя: замена всех его данных в Neon
@@ -316,18 +362,21 @@ export function compareState(state, expected) {
   check("XP", bp.xp, expected.xp);
   check("уровень", bp.level, expected.level);
   check("бейджи", bp.badges, expected.badges);
-  check("задания", bp.tasks.length, expected.tasks);
-  check("награды", bp.rewards.length, expected.rewards);
+  check("сезон", [bp.season, bp.seasonName, bp.maxLevel, bp.xpPerLevel], expected.season);
+  check("задания", bp.tasks.map(taskFingerprint), expected.tasks);
+  check("награды", bp.rewards.map(rewardFingerprint), expected.rewards);
   check("выполнено заданий", bp.completedTasks.length, expected.completedTasks);
   check("получено наград", bp.claimedRewards.length, expected.claimedRewards);
   const actualEntries = state.history.map(h => {
     const numeric = typeof h.grade === "number";
     return entryFingerprint({ ...h, bonusDesc: h.bonus, date: ruDateToISO(h.date), grade: numeric ? h.grade : null, gradeText: numeric ? null : h.grade });
-  }).sort();
+  });
+  // Порядок важен: история показывается в том же порядке, что в Firestore-версии
   if (actualEntries.length !== expected.entries.length) {
     diff.push(`записей: ${actualEntries.length} ≠ ${expected.entries.length}`);
-  } else if (actualEntries.some((e, i) => e !== expected.entries[i])) {
-    diff.push("содержимое записей отличается");
+  } else {
+    const i = actualEntries.findIndex((e, k) => e !== expected.entries[k]);
+    if (i >= 0) diff.push(`запись №${i + 1} новыми сверху: ${actualEntries[i]} ≠ ${expected.entries[i]}`);
   }
   return diff;
 }
