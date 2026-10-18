@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { LINES, gradeReaction, pickLine, fillLine, greeting, formatReward } from "../../src/domain/buddy.js";
 
-const NOT_FOR_KIDS = ["тупой", "тупая", "глуп", "дурак", "лентя", "позор", "двоечник", "бездар", "идиот"];
+const NOT_FOR_KIDS = ["тупой", "тупая", "глуп", "дурак", "лентя", "позор", "двоечник", "бездар", "идиот", "родител", "накаж", " бар", "хозяин"];
 
 describe("gradeReaction", () => {
   const e = (grade, extra = {}) => ({ grade, reward: 0, bonus: "", subject: "Алгебра", ...extra });
@@ -13,9 +13,13 @@ describe("gradeReaction", () => {
     expect(gradeReaction(e(2))).toMatchObject({ kind: "two", mood: "oops" });
   });
 
-  it("пятёрка с бонусом — комбо, а выполненное задание пропуска важнее всего", () => {
-    expect(gradeReaction(e(5, { bonus: "Удвоение за 2 пятёрки за день" })).kind).toBe("combo");
-    expect(gradeReaction(e(4), 1).kind).toBe("task");
+  it("пятёрка с бонусом — комбо, оно важнее задания пропуска", () => {
+    expect(gradeReaction(e(5, { bonus: "Удвоение за 2 пятёрки за день" }), 1).kind).toBe("combo");
+  });
+
+  it("задание пропуска празднуем только на хорошей оценке", () => {
+    expect(gradeReaction(e(4), 1)).toMatchObject({ kind: "task", mood: "party" });
+    expect(gradeReaction(e(3), 1)).toMatchObject({ kind: "three", mood: "oops" });
   });
 
   it("подставляет сумму со знаком и предмет", () => {
@@ -40,8 +44,8 @@ describe("тексты", () => {
     expect(new Set(all).size).toBe(all.length);
   });
 
-  it("на плохие оценки — ни одного обидного слова", () => {
-    for (const line of [...LINES.three, ...LINES.two, ...LINES.joke]) {
+  it("ни одного обидного или пугающего слова", () => {
+    for (const line of Object.values(LINES).flat()) {
       for (const word of NOT_FOR_KIDS) expect(line.toLowerCase(), line).not.toContain(word);
     }
   });

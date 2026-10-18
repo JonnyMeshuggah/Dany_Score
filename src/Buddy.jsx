@@ -4,7 +4,7 @@ import React from "react";
 import { BUDDY_NAME, gradeReaction, pickLine, greeting } from "./domain/buddy.js";
 
 const HIDDEN_KEY = "takefive:buddyHidden";
-const MOOD_MS = 2600;   // сколько длится анимация реакции
+const MOOD_MS = 3000;   // сколько длится анимация реакции (дольше прыжков и искр)
 const BUBBLE_MS = 7000; // сколько висит облачко
 
 function readHidden(){
@@ -59,6 +59,8 @@ export default function Buddy({ event }){
   const [hidden, setHidden] = React.useState(readHidden);
   const [line, setLine] = React.useState(null);
   const [mood, setMood] = React.useState("idle");
+  const [beat, setBeat] = React.useState(0); // новый beat перезапускает анимацию даже при том же настроении
+  const mountEvent = React.useRef(event);   // событие, бывшее до появления дроида (например, от прошлого входа), — не наше
   const prevIndex = React.useRef({});
   const timers = React.useRef([]);
 
@@ -68,6 +70,7 @@ export default function Buddy({ event }){
     timers.current.forEach(clearTimeout);
     setLine({ text, key: Date.now() });
     setMood(nextMood);
+    setBeat(b => b + 1);
     timers.current = [
       setTimeout(() => setMood("idle"), MOOD_MS),
       setTimeout(() => setLine(null), BUBBLE_MS)
@@ -83,7 +86,7 @@ export default function Buddy({ event }){
   }, [say]);
 
   React.useEffect(() => {
-    if (!event) return;
+    if (!event || event === mountEvent.current) return;
     const { kind, mood: nextMood, vars } = gradeReaction(event.entry, event.tasksDone);
     say(kind, vars, nextMood);
   }, [event, say]);
@@ -111,12 +114,14 @@ export default function Buddy({ event }){
         )}
       </div>
       <button className="buddy-bot" onClick={() => say("joke", {}, "talk")} title="Нажми — расскажу шутку" aria-label={`${BUDDY_NAME}: расскажи шутку`}>
-        <Droid />
-        {mood === "party" && (
-          <span className="buddy-sparks" aria-hidden="true">
-            {["✨","⭐","💰","✨","⭐","🎉"].map((s, i) => <span key={i} style={{ "--i": i }}>{s}</span>)}
-          </span>
-        )}
+        <span className="buddy-motion" key={beat}>
+          <Droid />
+          {mood === "party" && (
+            <span className="buddy-sparks" aria-hidden="true">
+              {["✨","⭐","💰","✨","⭐","🎉"].map((s, i) => <span key={i} style={{ "--i": i }}>{s}</span>)}
+            </span>
+          )}
+        </span>
       </button>
       <button className="buddy-hide" onClick={hide} title="Спрятать помощника" aria-label="Спрятать помощника">
         <span className="material-icons">expand_more</span>
