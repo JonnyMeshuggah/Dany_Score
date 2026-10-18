@@ -5,6 +5,7 @@ import { recalculateHistory, computeBalance } from "./domain/rewards.js";
 import { computeGradeStats } from "./domain/stats.js";
 import { levelProgress, completeTasks } from "./domain/battlePass.js";
 import { applyGrade } from "./domain/grades.js";
+import { QUOTES, pickQuoteIndex } from "./domain/quotes.js";
 
 // ==== Версия приложения ====
 const APP_VERSION = "v1.3.0-beta";
@@ -58,6 +59,16 @@ function initFirebase() {
 // запустить инициализацию
 initFirebase();
 
+
+// ==== Цитата при входе: случайная, не та же, что в прошлый раз ====
+const QUOTE_KEY = "takefive:lastQuote";
+function nextQuoteIndex(){
+  let prev = null;
+  try { const saved = localStorage.getItem(QUOTE_KEY); if (saved !== null) prev = Number(saved); } catch { /* хранилище недоступно */ }
+  const i = pickQuoteIndex(QUOTES.length, prev);
+  try { localStorage.setItem(QUOTE_KEY, String(i)); } catch { /* хранилище недоступно */ }
+  return i;
+}
 
 function App(){
   const [subjects] = React.useState(SUBJECTS);
@@ -119,6 +130,13 @@ function App(){
       if(!u){ lastSyncedRef.current = null; setHistory([]); setBalance(0); setLoaded(false); setHistoryReadyForSave(true); }
     });
   },[]);
+
+  // ---- Цитата: новая при каждом входе
+  const [quoteIdx, setQuoteIdx] = React.useState(null);
+  React.useEffect(()=>{
+    if(user) setQuoteIdx(nextQuoteIndex());
+  },[user?.uid]);
+  const quote = quoteIdx === null ? null : QUOTES[quoteIdx];
 
   // ---- Real-time load
   React.useEffect(()=>{
@@ -665,6 +683,14 @@ function App(){
     <div className="stack container">
      {/* Версия приложения */}
      <div className="app-version">{APP_VERSION}</div>
+
+     {user && quote && (
+       <figure className="card quote-card" key={quoteIdx}>
+         <span className="quote-mark" aria-hidden="true">“</span>
+         <blockquote className="quote-text">{quote.text}</blockquote>
+         <figcaption className="quote-author">— {quote.author}</figcaption>
+       </figure>
+     )}
 
      {!user ? (
   <div className="card auth-card" style={{textAlign: 'center'}}>

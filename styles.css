@@ -669,3 +669,66 @@ input:focus, select:focus {
 /* ==== Dark theme helpers ==== */
 .theme-logo { background: #fff; border-radius: 16px; } /* та же подложка для логотипа на экране входа */
 .badge-img { border-radius: 12px; }
+
+/* ==== Цитата при входе ==== */
+.quote-card {
+  position: relative;
+  margin: 0;
+  padding: 22px 24px 18px 56px;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 140% at 0% 0%, var(--md-primary-soft) 0%, transparent 60%),
+    var(--md-surface);
+  border-left: 4px solid var(--md-primary);
+  animation: quoteCardIn 0.7s cubic-bezier(.2,.7,.2,1) both;
+}
+.quote-mark {
+  position: absolute;
+  left: 14px;
+  top: 2px;
+  font-family: 'Lora', Georgia, serif;
+  font-size: 64px;
+  line-height: 1;
+  color: var(--md-primary);
+  opacity: 0.55;
+  animation: quoteMarkIn 0.8s 0.15s cubic-bezier(.2,.7,.2,1) both;
+}
+.quote-text {
+  margin: 0;
+  font-family: 'Lora', Georgia, serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: 18px;
+  line-height: 1.5;
+  color: var(--md-text);
+  animation: quoteTextIn 0.9s 0.25s ease-out both;
+}
+.quote-author {
+  margin-top: 10px;
+  text-align: right;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--md-primary);
+  animation: quoteTextIn 0.7s 0.8s ease-out both;
+}
+@keyframes quoteCardIn {
+  from { opacity: 0; transform: translateY(-12px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes quoteMarkIn {
+  from { opacity: 0; transform: scale(0.4) rotate(-20deg); }
+  to { opacity: 0.55; transform: none; }
+}
+@keyframes quoteTextIn {
+  from { opacity: 0; transform: translateY(6px); filter: blur(4px); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+@media (max-width: 600px) {
+  .quote-card { padding: 18px 16px 14px 44px; }
+  .quote-mark { left: 10px; font-size: 52px; }
+  .quote-text { font-size: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .quote-card, .quote-mark, .quote-text, .quote-author { animation: none; }
+}
