@@ -7,6 +7,13 @@
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <meta name="theme-color" content="#0B2850">
+  <!-- Тема: auto (по системе) / dark / light; применяем до отрисовки, чтобы не мигало -->
+  <script>
+    try {
+      var t = localStorage.getItem('theme');
+      if (t === 'dark' || t === 'light') document.documentElement.dataset.theme = t;
+    } catch (e) { /* без localStorage — тема по системе */ }
+  </script>
 
   <!-- Fonts & Icons -->
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
@@ -55,6 +62,10 @@
   <span class="material-icons">military_tech</span> Боевой пропуск
 </button>
 
+<button class="panel-btn" id="themeToggle">
+  <span class="material-icons">brightness_auto</span> <span class="theme-label">Тема: как в системе</span>
+</button>
+
       <a class="panel-btn" href="faq.html">
     <span class="material-icons">help</span> FAQ / Правила игры
   </a>
@@ -68,6 +79,38 @@
   </div>
 
 
+
+  <!-- Переключатель темы: авто → тёмная → светлая -->
+  <script>
+    (function () {
+      var btn = document.getElementById('themeToggle');
+      var modes = {
+        auto: { icon: 'brightness_auto', label: 'Тема: как в системе', next: 'dark' },
+        dark: { icon: 'dark_mode', label: 'Тема: тёмная', next: 'light' },
+        light: { icon: 'light_mode', label: 'Тема: светлая', next: 'auto' }
+      };
+      function current() {
+        var t = document.documentElement.dataset.theme;
+        return modes[t] ? t : 'auto';
+      }
+      function render() {
+        var m = modes[current()];
+        btn.querySelector('.material-icons').textContent = m.icon;
+        btn.querySelector('.theme-label').textContent = m.label;
+      }
+      btn.addEventListener('click', function () {
+        var next = modes[current()].next;
+        if (next === 'auto') delete document.documentElement.dataset.theme;
+        else document.documentElement.dataset.theme = next;
+        try {
+          if (next === 'auto') localStorage.removeItem('theme');
+          else localStorage.setItem('theme', next);
+        } catch (e) { /* не сохранится — не страшно */ }
+        render();
+      });
+      render();
+    })();
+  </script>
 
   <!-- Основное приложение собирает Vite (initFirebase в src/App.jsx сам ждёт window.env) -->
   <script type="module" src="/src/App.jsx"></script>

@@ -1,10 +1,81 @@
 :root {
+  color-scheme: light;
   --md-primary: #6200ea;
   --md-primary-dark: #3700b3;
+  --md-on-primary: #fff;
+  --md-primary-tint: rgba(98,0,234,0.08);
+  --md-primary-soft: rgba(98,0,234,0.1);
   --md-bg: #f5f5f5;
+  --md-surface: #fff;
+  --md-surface-2: #f9f9f9;
   --md-text: #212121;
   --md-text-muted: #666;
+  --md-text-faint: #999;
   --md-border: rgba(0,0,0,0.12);
+  --md-divider: #eee;
+  --md-line: #e0e0e0;
+  --md-input-border: #ccc;
+  --md-track: #e0e0e0;
+  --md-hover: rgba(0,0,0,0.06);
+  --md-shadow: rgba(0,0,0,0.08);
+  --md-bonus: #1b5e20;
+  --md-negative: #b00020;
+  --md-success-bg-1: #e8f5e9;
+  --md-success-bg-2: #f1f8e9;
+}
+
+/* ==== Dark theme: по системе, если не выбрана светлая; или принудительно ==== */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --md-primary: #bb86fc;
+    --md-primary-dark: #9a67ea;
+    --md-on-primary: #1c0a33;
+    --md-primary-tint: rgba(187,134,252,0.12);
+    --md-primary-soft: rgba(187,134,252,0.16);
+    --md-bg: #121212;
+    --md-surface: #1e1e1e;
+    --md-surface-2: #262626;
+    --md-text: #e6e6e6;
+    --md-text-muted: #a0a0a0;
+    --md-text-faint: #757575;
+    --md-border: rgba(255,255,255,0.12);
+    --md-divider: #2c2c2c;
+    --md-line: #333;
+    --md-input-border: #555;
+    --md-track: #333;
+    --md-hover: rgba(255,255,255,0.08);
+    --md-shadow: rgba(0,0,0,0.5);
+    --md-bonus: #81c784;
+    --md-negative: #ef5350;
+    --md-success-bg-1: #1b3a1f;
+    --md-success-bg-2: #22331b;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --md-primary: #bb86fc;
+  --md-primary-dark: #9a67ea;
+  --md-on-primary: #1c0a33;
+  --md-primary-tint: rgba(187,134,252,0.12);
+  --md-primary-soft: rgba(187,134,252,0.16);
+  --md-bg: #121212;
+  --md-surface: #1e1e1e;
+  --md-surface-2: #262626;
+  --md-text: #e6e6e6;
+  --md-text-muted: #a0a0a0;
+  --md-text-faint: #757575;
+  --md-border: rgba(255,255,255,0.12);
+  --md-divider: #2c2c2c;
+  --md-line: #333;
+  --md-input-border: #555;
+  --md-track: #333;
+  --md-hover: rgba(255,255,255,0.08);
+  --md-shadow: rgba(0,0,0,0.5);
+  --md-bonus: #81c784;
+  --md-negative: #ef5350;
+  --md-success-bg-1: #1b3a1f;
+  --md-success-bg-2: #22331b;
 }
 
 body {
@@ -22,7 +93,7 @@ button {
   padding: 10px 16px;
   font-weight: 500;
   background-color: var(--md-primary);
-  color: #fff;
+  color: var(--md-on-primary);
   box-shadow: 0 2px 5px rgba(0,0,0,0.2);
   transition: background .25s;
   cursor: pointer;
@@ -36,17 +107,19 @@ button:hover { background: var(--md-primary-dark); }
   padding: 6px 8px;
   text-transform: none;
 }
-.text-btn:hover { background: rgba(98,0,234,0.08); }
+.text-btn:hover { background: var(--md-primary-tint); }
 
 /* ==== Inputs ==== */
 input, select {
   border: none;
-  border-bottom: 2px solid #ccc;
+  border-bottom: 2px solid var(--md-input-border);
   padding: 6px 4px;
   font-size: 16px;
+  color: inherit;
   background: transparent;
   transition: border-color 0.2s;
 }
+select option { background: var(--md-surface); color: var(--md-text); }
 input:focus, select:focus {
   border-color: var(--md-primary);
   outline: none;
@@ -54,9 +127,9 @@ input:focus, select:focus {
 
 /* ==== Cards ==== */
 .card {
-  background: #fff;
+  background: var(--md-surface);
   border-radius: 10px;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+  box-shadow: 0 4px 14px var(--md-shadow);
   padding: 16px;
 }
 
@@ -86,7 +159,7 @@ input:focus, select:focus {
   align-items: center;  /* <-- возвращаем выравнивание по центру на десктопе */
   gap: 8px;
   padding: 8px 0;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid var(--md-line);
   animation: fadeIn 0.3s ease-in;
 }
 
@@ -128,8 +201,8 @@ input:focus, select:focus {
     justify-content: flex-end; /* сумма и корзина вправо */
   }
 }
-.bonus { color: #1b5e20; font-weight: 700; }
-.negative { color: #b00020; }
+.bonus { color: var(--md-bonus); font-weight: 700; }
+.negative { color: var(--md-negative); }
 
 /* ==== Balance ==== */
 .balance-card .value { font-size: 24px; font-weight: 700; }
@@ -195,7 +268,7 @@ input:focus, select:focus {
   top: 16px;
   left: 16px;
   background: transparent;
-  color: #333;
+  color: var(--md-text);
   box-shadow: none;
   width: 40px;
   height: 40px;
@@ -206,7 +279,7 @@ input:focus, select:focus {
   z-index: 1100;
   cursor: pointer;
 }
-.burger:hover { background: rgba(0,0,0,0.06); }
+.burger:hover { background: var(--md-hover); }
 
 /* ==== Close button ==== */
 .close-btn {
@@ -243,6 +316,8 @@ input:focus, select:focus {
   width: 150px;
   height: 150px;
   margin-bottom: 6px;
+  background: #fff; /* логотип прозрачный с тёмным текстом — нужна светлая подложка */
+  border-radius: 16px;
 }
 
 .sidebar-title {
@@ -282,7 +357,7 @@ input:focus, select:focus {
 
 .bp-tasks li {
   padding: 8px 0;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--md-divider);
 }
 
 .bp-tasks li.done {
@@ -298,11 +373,11 @@ input:focus, select:focus {
 }
 
 .reward {
-  background: #f9f9f9;
+  background: var(--md-surface-2);
   border-radius: 8px;
   padding: 10px;
   text-align: center;
-  border: 1px solid #eee;
+  border: 1px solid var(--md-divider);
   transition: all 0.3s ease;
   position: relative;
   cursor: default;
@@ -310,16 +385,16 @@ input:focus, select:focus {
 
 /* Заблокированная награда (уровень не достигнут) */
 .reward.locked {
-  background: #f5f5f5;
-  border-color: #ddd;
+  background: var(--md-bg);
+  border-color: var(--md-line);
   opacity: 0.6;
-  color: #999;
+  color: var(--md-text-faint);
 }
 
 /* Разблокированная награда (можно получить) */
 .reward.unlocked {
   border-color: #4caf50;
-  background: linear-gradient(135deg, #e8f5e9, #f1f8e9);
+  background: linear-gradient(135deg, var(--md-success-bg-1), var(--md-success-bg-2));
   box-shadow: 0 0 12px rgba(76, 175, 80, 0.4);
   cursor: pointer;
   animation: pulse 2s infinite;
@@ -332,8 +407,8 @@ input:focus, select:focus {
 
 /* Полученная награда */
 .reward.claimed {
-  border-color: #bbb;
-  background: #e0e0e0;
+  border-color: var(--md-input-border);
+  background: var(--md-track);
   opacity: 0.7;
 }
 
@@ -357,18 +432,18 @@ input:focus, select:focus {
 
 .reward .lvl {
   font-weight: 700;
-  color: #555;
+  color: var(--md-text-muted);
 }
 
 .reward .val {
   font-size: 14px;
-  color: #333;
+  color: var(--md-text);
 }
 
 .progress-bar.large {
   width: 100%;
   height: 10px;
-  background: #e0e0e0;
+  background: var(--md-track);
   border-radius: 6px;
   overflow: hidden;
   margin-top: 6px;
@@ -393,7 +468,7 @@ input:focus, select:focus {
 
 .admin-list li {
   padding: 6px 0;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--md-divider);
 }
 
 .admin-list li:last-child {
@@ -405,7 +480,7 @@ input:focus, select:focus {
 }
 
 .battle-pass-admin input {
-  border: 1px solid #ccc;
+  border: 1px solid var(--md-input-border);
   border-radius: 6px;
   padding: 6px 8px;
   font-size: 14px;
@@ -431,7 +506,7 @@ input:focus, select:focus {
   cursor:pointer;
   padding:0;
   margin:0;
-  color:#a0a0a0;      /* светло-серый */
+  color:var(--md-text-faint);
   font-size:22px;
   line-height:1;
   opacity:.8;
@@ -440,7 +515,7 @@ input:focus, select:focus {
 }
 .close-admin-btn:hover{
   opacity:1;
-  color:#707070;      /* чуть темнее */
+  color:var(--md-text-muted);
 }
 .close-admin-btn:focus{
   outline:none;
@@ -453,9 +528,9 @@ input:focus, select:focus {
 
 /* ==== Statistics Card ==== */
 .stats-card {
-  background: #fff;
+  background: var(--md-surface);
   border-radius: 10px;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+  box-shadow: 0 4px 14px var(--md-shadow);
   padding: 16px;
 }
 
@@ -470,7 +545,7 @@ input:focus, select:focus {
 .stat-item {
   text-align: center;
   padding: 12px 20px;
-  background: #f9f9f9;
+  background: var(--md-surface-2);
   border-radius: 8px;
   min-width: 120px;
 }
@@ -496,7 +571,7 @@ input:focus, select:focus {
   gap: 16px;
   min-height: 200px;
   padding: 20px 10px 10px;
-  background: #fafafa;
+  background: var(--md-surface-2);
   border-radius: 8px;
   margin-top: 16px;
 }
@@ -575,7 +650,7 @@ input:focus, select:focus {
   position: fixed;
   top: 16px;
   right: 16px;
-  background: rgba(98, 0, 234, 0.1);
+  background: var(--md-primary-soft);
   color: var(--md-primary);
   padding: 4px 10px;
   border-radius: 12px;
@@ -590,3 +665,7 @@ input:focus, select:focus {
 .app-version:hover {
   opacity: 1;
 }
+
+/* ==== Dark theme helpers ==== */
+.theme-logo { background: #fff; border-radius: 16px; } /* та же подложка для логотипа на экране входа */
+.badge-img { border-radius: 12px; }
