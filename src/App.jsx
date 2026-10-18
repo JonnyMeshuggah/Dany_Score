@@ -4,6 +4,7 @@ import { todayISO, isoToRuDate } from "./domain/dates.js";
 import { recalculateHistory, computeBalance } from "./domain/rewards.js";
 import { computeGradeStats } from "./domain/stats.js";
 import { levelProgress, completeTasks } from "./domain/battlePass.js";
+import { loadSeasonPreset, isPresetLoaded, PRESET_NAME } from "./domain/seasonPreset.js";
 import { applyGrade } from "./domain/grades.js";
 import { QUOTES, pickQuoteIndex } from "./domain/quotes.js";
 
@@ -527,6 +528,15 @@ function App(){
     alert("✅ Боевой пропуск сброшен!");
   };
 
+  // Готовый сезон: заполняет состояние, в базу пишет кнопка «Сохранить»
+  const launchPresetSeason = () => {
+    if(!confirm(`Запустить сезон «${PRESET_NAME}»? Задания, награды, уровень и бейджи текущего сезона заменятся. Баланс и история не изменятся.`)) return;
+    console.log("Боевой пропуск до запуска сезона:", JSON.stringify(battlePass));
+    setBattlePass(prev => loadSeasonPreset(prev, history));
+    setBpUnsavedChanges(true);
+    alert("✅ Сезон загружен. Нажмите «Сохранить», чтобы записать его.");
+  };
+
   // ---- App logic
   const addGrade = ()=>{
     if(!user) return alert("Сначала войдите в аккаунт");
@@ -993,6 +1003,11 @@ function App(){
                   />
                   <span className="muted" style={{fontSize: '13px'}}>Сезон #{battlePass.season}</span>
                 </div>
+                {!isPresetLoaded(battlePass) && (
+                  <button onClick={launchPresetSeason} style={{marginTop: '8px', width: '100%'}}>
+                    🚀 Запустить сезон «{PRESET_NAME}»
+                  </button>
+                )}
               </div>
 
               <div className="section">
