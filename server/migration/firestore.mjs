@@ -22,10 +22,11 @@ export function ruDateToISO(value) {
   return `${y}-${pad(mo)}-${pad(d)}`;
 }
 
-// Целое из числа или строки "123"; иначе null
+// Целое из числа или строки "123" в пределах integer Postgres; иначе null
+const INT4_MAX = 2 ** 31 - 1;
 function toInt(value) {
   const n = typeof value === "string" && value.trim() !== "" ? Number(value) : value;
-  return typeof n === "number" && Number.isInteger(n) ? n : null;
+  return typeof n === "number" && Number.isInteger(n) && Math.abs(n) <= INT4_MAX ? n : null;
 }
 
 function toNumber(value) {
@@ -67,10 +68,14 @@ function planEntries(history, errors, warnings) {
     });
   });
 
-  // Порядок внутри дня в UI: id-таймштамп по убыванию, при равных (в т.ч. записи без id — выводы,
-  // id 0) — порядок массива, новые сверху. В Neon порядок задаёт только sortKey, поэтому ключи дня
-  // строго возрастают снизу вверх: sortKey = max(id, ключ записи ниже + 1). Уникальные id сохраняются,
-  // записи без id получают 1, 2, …, повторы раздвигаются (с предупреждением).
+  // Порядок внутри дня — compareNewestFirst (src/domain/dates.js): id-таймштамп по убыванию, при равных
+  // (в т.ч. записи без id — выводы, id 0) — порядок массива. По нему же доменная логика считает бонусы
+  // дня и пересчитывает их при удалении. Firestore-версия показывала массив как есть и сортировала так
+  // только после добавления оценки или бонуса: вывод, добавленный в начало массива, до этого был
+  // сверху дня, а после переезда — внизу дня, как после следующей оценки в старой версии. Суммы те же.
+  // В Neon порядок задаёт только sortKey, поэтому ключи дня строго возрастают снизу вверх:
+  // sortKey = max(id, ключ записи ниже + 1). Уникальные id сохраняются, записи без id получают 1, 2, …,
+  // повторы раздвигаются (с предупреждением).
   const byDay = new Map();
   for (const r of rows) byDay.set(r.date, [...(byDay.get(r.date) ?? []), r]);
   for (const day of byDay.values()) {
@@ -79,7 +84,7 @@ function planEntries(history, errors, warnings) {
     for (let i = day.length - 1; i >= 0; i--) {
       const r = day[i];
       r.sortKey = Math.max(r.id, below + 1);
-      if (r.id > 0 && r.sortKey !== r.id) warnings.push(`history[${r.index}] (${r.subject}): повтор id ${r.id} в дне — порядок сохранён`);
+      if (r.id > 0 && r.sortKey !== r.id) warnings.push(`history[${r.index}] (${r.subject}): id ${r.id} → sortKey ${r.sortKey}, чтобы сохранить порядок дня`);
       below = r.sortKey;
     }
   }
@@ -212,7 +217,9 @@ export function planUser(doc, { now = new Date(), reconcile = false } = {}) {
   const computedBalance = entries.reduce((s, e) => s + e.reward, 0);
   let storedBalance = data?.balance;
   if (typeof storedBalance !== "number") {
-    if (entries.length) errors.push(`balance «${storedBalance}» не число при непустой истории`);
+    if (entries.length) {
+      errors.push(storedBalance === undefined ? "нет balance при непустой истории" : `balance «${storedBalance}» не число при непустой истории`);
+    }
     storedBalance = 0;
   }
   if (!Number.isInteger(storedBalance)) errors.push(`balance ${storedBalance} не целое число`);
@@ -264,8 +271,9 @@ export function planUser(doc, { now = new Date(), reconcile = false } = {}) {
     entries: [...entries].sort((a, b) => b.date.localeCompare(a.date) || b.sortKey - a.sortKey).map(entryFingerprint),
     tasks: bp.tasks.map(taskFingerprint),
     rewards: [...bp.rewards].sort((a, b) => a.level - b.level).map(rewardFingerprint),
-    completedTasks: bp.completions.filter(c => c.taskRef !== null).length,
-    claimedRewards: bp.claims.filter(c => c.rewardRef !== null).length
+    // Отметки — по содержимому задания или награды, на которые ссылаются
+    completedTasks: bp.completions.filter(c => c.taskRef !== null).map(c => taskFingerprint(bp.tasks[c.taskRef])).sort(),
+    claimedRewards: bp.claims.filter(c => c.rewardRef !== null).map(c => rewardFingerprint(bp.rewards[c.rewardRef])).sort()
   };
 
   return {
@@ -365,13 +373,14 @@ export function compareState(state, expected) {
   check("сезон", [bp.season, bp.seasonName, bp.maxLevel, bp.xpPerLevel], expected.season);
   check("задания", bp.tasks.map(taskFingerprint), expected.tasks);
   check("награды", bp.rewards.map(rewardFingerprint), expected.rewards);
-  check("выполнено заданий", bp.completedTasks.length, expected.completedTasks);
-  check("получено наград", bp.claimedRewards.length, expected.claimedRewards);
+  const byId = (list, fingerprint) => (id) => fingerprint(list.find(x => x.id === id) ?? {});
+  check("выполнено заданий", bp.completedTasks.map(byId(bp.tasks, taskFingerprint)).sort(), expected.completedTasks);
+  check("получено наград", bp.claimedRewards.map(byId(bp.rewards, rewardFingerprint)).sort(), expected.claimedRewards);
   const actualEntries = state.history.map(h => {
     const numeric = typeof h.grade === "number";
     return entryFingerprint({ ...h, bonusDesc: h.bonus, date: ruDateToISO(h.date), grade: numeric ? h.grade : null, gradeText: numeric ? null : h.grade });
   });
-  // Порядок важен: история показывается в том же порядке, что в Firestore-версии
+  // Порядок важен: API должно отдать историю в порядке, рассчитанном при разборе (см. planEntries)
   if (actualEntries.length !== expected.entries.length) {
     diff.push(`записей: ${actualEntries.length} ≠ ${expected.entries.length}`);
   } else {
@@ -392,8 +401,8 @@ export function formatReport({ notes, users }, { reconcile = false } = {}) {
     lines.push(`   записей: ${p.entries.length}; баланс в Firestore: ${p.expected?.balance ?? "—"}`);
     if (bp) {
       lines.push(`   боевой пропуск: сезон ${bp.season.number} «${bp.season.name}», XP ${bp.storedXp}, уровень ${p.expected.level}, ` +
-        `заданий ${bp.tasks.length} (выполнено ${p.expected.completedTasks}), наград ${bp.rewards.length} ` +
-        `(получено ${p.expected.claimedRewards}), бейджи [${bp.storedBadges.join(", ")}]`);
+        `заданий ${bp.tasks.length} (выполнено ${p.expected.completedTasks.length}), наград ${bp.rewards.length} ` +
+        `(получено ${p.expected.claimedRewards.length}), бейджи [${bp.storedBadges.join(", ")}]`);
     }
     const m = p.mismatches;
     if (m.balance) lines.push(`   расхождение баланса: сохранён ${m.balance.stored}, сумма истории ${m.balance.computed} (разница ${m.balance.stored - m.balance.computed})`);

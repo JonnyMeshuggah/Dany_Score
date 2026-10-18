@@ -58,7 +58,9 @@ describe("разбор документа", () => {
     expect(p.entries.map(e => e.kind)).toEqual(["cashout", "grade", "grade", "bp_reward", "grade"]);
     expect(p.entries[2]).toMatchObject({ date: "2026-10-16", grade: 4, gradeText: null, reward: 100 });
     expect(p.entries[0]).toMatchObject({ grade: null, gradeText: "—", reward: -300, bonusDesc: "Частичный вывод" });
-    expect(p.expected).toMatchObject({ balance: 800, xp: 350, level: 1, badges: [2], completedTasks: 2, claimedRewards: 2 });
+    expect(p.expected).toMatchObject({ balance: 800, xp: 350, level: 1, badges: [2] });
+    expect(p.expected.completedTasks).toHaveLength(2);
+    expect(p.expected.claimedRewards).toHaveLength(2);
   });
 
   it("записи без id — в начале своего дня, в порядке массива; с id — sortKey = id", () => {
@@ -122,7 +124,7 @@ describe("разбор документа", () => {
       ]
     });
     expect(p.entries.map(e => e.sortKey)).toEqual([501, 500, 12]);
-    expect(p.warnings.join()).toMatch(/повтор id 500/);
+    expect(p.warnings.join()).toMatch(/id 500 → sortKey 501/);
     expect(p.warnings.join()).toMatch(/«12abc» читается как 12/);
   });
 
@@ -131,6 +133,7 @@ describe("разбор документа", () => {
     Object.assign(data.battlePass, { xpPerLevel: "много", season: "x" });
     data.battlePass.tasks[0].target = "три";
     Object.assign(data.battlePass.rewards[0], { amount: "пятьсот" });
+    data.battlePass.rewards[1].badgeNumber = 2 ** 40; // не влезет в integer Postgres
     const p = plan(data);
     const w = p.warnings.join("\n");
     expect(w).toMatch(/xpPerLevel «много» некорректно — будет 200/);
@@ -138,6 +141,7 @@ describe("разбор документа", () => {
     expect(w).toMatch(/tasks\[0\]\.target «три»/);
     expect(w).toMatch(/rewards\[0\]\.amount «пятьсот»/);
     expect(w).toMatch(/денежная награда без суммы/);
+    expect(w).toMatch(/rewards\[1\]\.badgeNumber «1099511627776» некорректно/);
   });
 });
 
@@ -166,7 +170,8 @@ describe("сверка и корректировки", () => {
 
     const fixed = plan(data, { reconcile: true });
     expect(fixed.battlePass.completions).toContainEqual({ taskRef: null, xp: 200 });
-    expect(fixed.expected).toMatchObject({ xp: 350, completedTasks: 1 });
+    expect(fixed.expected.xp).toBe(350);
+    expect(fixed.expected.completedTasks).toHaveLength(1);
   });
 
   it("бейдж без отметки о награде: с --reconcile — отметка бейджа без награды", () => {
@@ -212,6 +217,8 @@ describe("запись в Postgres", () => {
     await migrate("m-full", fullUser());
     const state = await stateOf("m-full");
     expect(state.balance).toBe(800);
+    // Смешанный день 16.10: вывод без id первым в массиве. Порядок — compareNewestFirst, как стал бы
+    // в Firestore-версии после следующей оценки: вывод внизу дня (см. planEntries)
     expect(state.history.map(h => h.subject)).toEqual(["Математика", "Русский", "💸 Вывод средств", "🏆 Награда BP (Ур.1)", "Физика"]);
     expect(state.history[1]).toMatchObject({ date: "16.10.2026", grade: 4, reward: 100 });
     expect(state.battlePass).toMatchObject({
@@ -271,6 +278,10 @@ describe("запись в Postgres", () => {
     const q = planUser({ id: "m-order", data: fullUser() }, { now: NOW });
     q.battlePass.tasks[0].xp = 999; // записано не то, что ожидалось
     await expect(applyUser(env.db, q)).rejects.toThrow(/задания/);
+
+    const r = planUser({ id: "m-order", data: fullUser() }, { now: NOW });
+    r.battlePass.claims[0].rewardRef = 2; // отметка не на ту награду
+    await expect(applyUser(env.db, r)).rejects.toThrow(/получено наград/);
   });
 });
 
