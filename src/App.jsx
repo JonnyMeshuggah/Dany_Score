@@ -7,6 +7,7 @@ import { levelProgress, completeTasks } from "./domain/battlePass.js";
 import { loadSeasonPreset, isPresetLoaded, PRESET_NAME } from "./domain/seasonPreset.js";
 import { applyGrade } from "./domain/grades.js";
 import { QUOTES, pickQuoteIndex } from "./domain/quotes.js";
+import Buddy from "./Buddy.jsx";
 
 // ==== Версия приложения ====
 const APP_VERSION = "v1.3.0-beta";
@@ -138,6 +139,9 @@ function App(){
     if(user) setQuoteIdx(nextQuoteIndex());
   },[user?.uid]);
   const quote = quoteIdx === null ? null : QUOTES[quoteIdx];
+
+  // ---- Помощник Пятик: последнее событие, на которое он реагирует
+  const [buddyEvent, setBuddyEvent] = React.useState(null);
 
   // ---- Real-time load
   React.useEffect(()=>{
@@ -551,6 +555,8 @@ function App(){
 
     // Задания боевого пропуска
     applyCompletedTasks(tasks);
+
+    setBuddyEvent({ entry, tasksDone: tasks.length });
   };
 
   const deleteEntry = (i)=>{
@@ -1187,6 +1193,8 @@ function App(){
           <span className="material-icons">menu</span>
         </button>
       )}
+
+      {user && <Buddy key={user.uid} event={buddyEvent} />}
     </div>
   );
 }

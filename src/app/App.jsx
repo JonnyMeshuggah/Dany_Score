@@ -10,6 +10,7 @@ import {
   QuoteCard, AuthCard, UserCard, GradeForm, BalanceCard, BadgesCard, StatsCard, BattlePassCard, HistoryCard
 } from "./components/cards.jsx";
 import { AdminPanel } from "./components/AdminPanel.jsx";
+import Buddy from "../Buddy.jsx";
 
 // Цитата при входе: случайная, не та же, что в прошлый раз
 const QUOTE_KEY = "takefive:lastQuote";
@@ -81,6 +82,7 @@ export function App({ auth, api }) {
   const busyRef = React.useRef(false);
   const [adminOpen, setAdminOpen] = React.useState(false);
   const [quote, setQuote] = React.useState(null);
+  const [buddyEvent, setBuddyEvent] = React.useState(null); // последняя оценка — на неё реагирует Пятик
 
   // Сессия — номер входа. Ответы на запросы прошлой сессии (выход, вход другим пользователем) отбрасываются,
   // иначе поздний ответ показал бы чужие данные или оставил открытой админку.
@@ -184,6 +186,7 @@ export function App({ auth, api }) {
       entry.reward >= 0 ? "success" : "error");
     if (res.completedTasks.length > 0) toast(`🎯 Выполнено заданий: ${res.completedTasks.length}`, "success");
     if (res.levelUp) toast(`🎉 Новый уровень ${res.state.battlePass.level}! Проверьте награды.`, "success");
+    setBuddyEvent({ entry, tasksDone: res.completedTasks.length });
   };
 
   const cashOut = async (raw) => {
@@ -284,6 +287,8 @@ export function App({ auth, api }) {
           <span className="material-icons">menu</span>
         </button>
       )}
+
+      {user && <Buddy key={user.uid} event={buddyEvent} />}
     </div>
   );
 }

@@ -231,6 +231,16 @@ describe("оценки и история", () => {
     expect(toastText()).toContain("+250 ₽");
   });
 
+  it("Пятик реагирует на добавленную оценку, приветствие её не перебивает", async () => {
+    renderApp();
+    fireEvent.click(await screen.findByRole("button", { name: /Добавить/ }));
+    const bubble = () => document.querySelector(".buddy-say").textContent;
+    await waitFor(() => expect(bubble()).toMatch(/Пятик.*(\+250 ₽|Алгебра|Пятёрка)/));
+    const reaction = bubble();
+    await act(() => new Promise(r => setTimeout(r, 1300)));
+    expect(bubble()).toBe(reaction);
+  });
+
   it("двойной клик — один запрос", async () => {
     const api = fakeApi();
     let release;
