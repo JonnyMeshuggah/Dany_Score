@@ -36,9 +36,10 @@ export function createApi({ getIdToken, fetchImpl = (...args) => fetch(...args) 
     }
     const headers = { authorization: `Bearer ${idToken}` };
     if (body !== undefined) headers["content-type"] = "application/json";
+    const sentAdminToken = admin ? adminToken : null;
     if (admin) {
-      if (!adminToken) throw new ApiError(403, "forbidden", MESSAGES.forbidden);
-      headers["x-admin-token"] = adminToken;
+      if (!sentAdminToken) throw new ApiError(403, "forbidden", MESSAGES.forbidden);
+      headers["x-admin-token"] = sentAdminToken;
     }
 
     let res;
@@ -52,8 +53,9 @@ export function createApi({ getIdToken, fetchImpl = (...args) => fetch(...args) 
     let data = {};
     try { data = await res.json(); } catch { /* ответ не JSON */ }
     const code = data.error || `http_${res.status}`;
-    // Токен админки истёк или подменён — дальше снова нужен PIN
-    if (admin && res.status === 403) adminToken = null;
+    // Токен админки истёк — дальше снова нужен PIN. Сбрасываем только тот, с которым ушёл запрос:
+    // после выхода и нового входа здесь уже может лежать токен другого пользователя
+    if (admin && res.status === 403 && adminToken === sentAdminToken) adminToken = null;
     const message = data.message && data.message !== code ? data.message : MESSAGES[code] ?? `Ошибка сервера (${res.status})`;
     throw new ApiError(res.status, code, message);
   }

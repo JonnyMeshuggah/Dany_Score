@@ -153,6 +153,18 @@ describe("смена пользователя и сессия", () => {
     expect(screen.getByText("Баланс: 777 ₽")).toBeTruthy();
   });
 
+  it("смена аккаунта при открытом подтверждении вывода — окно закрыто, вывода нет", async () => {
+    const auth = fakeAuth();
+    const { api } = renderApp({ auth });
+    fireEvent.change(await screen.findByLabelText("Сумма вывода"), { target: { value: "100" } });
+    fireEvent.click(screen.getByRole("button", { name: /Вывести/ }));
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    await act(async () => auth.emit({ uid: "u2", email: "other@example.com" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    await screen.findByText("Баланс: 1000 ₽");
+    expect(api.cashOut).not.toHaveBeenCalled();
+  });
+
   it("повторное уведомление о том же пользователе не сбрасывает экран", async () => {
     const auth = fakeAuth();
     const { api } = renderApp({ auth });

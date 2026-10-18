@@ -103,6 +103,25 @@ describe("админка", () => {
     expect(api.isAdmin).toBe(false);
   });
 
+  it("403 на запрос со старым токеном не сбрасывает новый", async () => {
+    let releaseOld;
+    const responses = [
+      json(200, { token: "old" }),
+      new Promise(r => { releaseOld = () => r(json(403, { error: "forbidden" })); }),
+      json(200, { token: "new" })
+    ];
+    const fetchImpl = vi.fn(() => responses.shift());
+    const api = createApi({ getIdToken: async () => "t", fetchImpl });
+    await api.unlockAdmin("123456");
+    const stale = api.resetSeason();
+    await vi.waitFor(() => expect(fetchImpl).toHaveBeenCalledTimes(2));
+    api.lockAdmin(); // выход, вход другим пользователем
+    await api.unlockAdmin("123456");
+    releaseOld();
+    await expect(stale).rejects.toMatchObject({ code: "forbidden" });
+    expect(api.isAdmin).toBe(true);
+  });
+
   it("lockAdmin закрывает админку", async () => {
     const { api } = setup([json(200, { token: "adm" })]);
     await api.unlockAdmin("123456");

@@ -73,7 +73,7 @@ function useSidebar(enabled, handlers) {
 
 export function App({ auth, api }) {
   const dialogs = useDialogs();
-  const { toast, confirm, prompt } = dialogs;
+  const { toast, cancelAll } = dialogs;
   const [user, setUser] = React.useState(undefined); // undefined — Firebase ещё не ответил
   const [state, setState] = React.useState(null);
   const [loadError, setLoadError] = React.useState(null);
@@ -93,6 +93,7 @@ export function App({ auth, api }) {
     if (nextUid === uidRef.current) return; // повторное уведомление о том же пользователе
     uidRef.current = nextUid;
     sessionRef.current += 1;
+    cancelAll();
     busyRef.current = false;
     setBusy(false);
     setState(null);
@@ -100,7 +101,20 @@ export function App({ auth, api }) {
     setAdminOpen(false);
     api.lockAdmin();
     setQuote(u ? nextQuote() : null);
-  }), [auth, api]);
+  }), [auth, api, cancelAll]);
+
+  // Ответ в окне засчитывается только в той сессии, где окно открыли: смена аккаунта (в т.ч. в другой
+  // вкладке) закрывает окно отказом, и действие прежнего пользователя не уйдёт от имени нового
+  const confirm = async (...args) => {
+    const session = sessionRef.current;
+    const ok = await dialogs.confirm(...args);
+    return ok && session === sessionRef.current;
+  };
+  const prompt = async (...args) => {
+    const session = sessionRef.current;
+    const value = await dialogs.prompt(...args);
+    return session === sessionRef.current ? value : null;
+  };
 
   // Номер последнего запроса состояния: загрузка, начатая раньше мутации или повторной загрузки,
   // не перетирает более свежее состояние
@@ -255,7 +269,7 @@ export function App({ auth, api }) {
           <BattlePassCard bp={state.battlePass} busy={busy} onClaim={claimReward} />
           <HistoryCard history={state.history} busy={busy} onDelete={deleteEntry} />
           {adminOpen && (
-            <AdminPanel bp={state.battlePass} busy={busy} run={run} api={api} dialogs={dialogs} onClose={() => setAdminOpen(false)} />
+            <AdminPanel bp={state.battlePass} busy={busy} run={run} api={api} dialogs={{ toast, confirm }} onClose={() => setAdminOpen(false)} />
           )}
         </>
       )}

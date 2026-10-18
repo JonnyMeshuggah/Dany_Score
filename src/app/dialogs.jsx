@@ -28,6 +28,14 @@ export function DialogProvider({ children }) {
     return {
       confirm: (message, opts = {}) => open("confirm", message, opts),
       prompt: (message, opts = {}) => open("prompt", message, opts),
+      // Закрыть открытое окно отказом (например, при смене пользователя)
+      cancelAll: () => {
+        const prev = dialogRef.current;
+        if (!prev) return;
+        prev.resolve(prev.kind === "prompt" ? null : false);
+        dialogRef.current = null;
+        setDialog(null);
+      },
       toast: (message, kind = "info") => {
         const id = ++toastSeq;
         setToasts(list => [...list, { id, message, kind }]);
