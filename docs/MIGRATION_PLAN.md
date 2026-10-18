@@ -106,12 +106,24 @@ Vercel Functions (/api)
   Отсутствующий `balance` при непустой истории — ошибка, `--reconcile` её не закрывает
 
 ### 5. Фронт на API
-- Разбить `App` на компоненты, `GET /api/state` + обновление после мутаций,
-  нормальные диалоги вместо `alert`/`prompt`
+- [x] Переключатель `DATA_BACKEND` в `/api/env`: `api` — новое приложение (`src/app/`), иначе — прежнее
+      на Firestore (`src/App.jsx` не менялся). Выбор делает `src/main.js` при старте
+- [x] `src/app/`: компоненты (`components/cards.jsx`, `components/AdminPanel.jsx`), клиент `api.js`,
+      `GET /api/state` при входе, свежее состояние из ответа каждой мутации; один запрос за раз
+      (двойной клик не проводит операцию дважды)
+- [x] Диалоги и уведомления (`dialogs.jsx`) вместо `alert`/`confirm`/`prompt`; подтверждение на вывод,
+      удаление записи, бонус, импорт и сброс сезона; ошибки Firebase Auth — по-русски
+- [x] Админка — PIN через `POST /api/admin/unlock` (токен 30 минут в памяти вкладки) вместо кода в клиенте;
+      изменения боевого пропуска сохраняются сразу, кнопки «Сохранить» нет. Импорт CSV — только с PIN
+- [x] Тесты: клиент API (`tests/app/api.test.mjs`), экраны на jsdom (`tests/app/App.test.jsx`), `/api/env`
+- [ ] `DATA_BACKEND=api` в Vercel для Preview и проверка экранов на Preview (человек)
 
 ### 6. Переключение
 1. Preview-деплой + миграция копии данных, сверка балансов
-2. Read-only в старой версии → финальная миграция → Production
+2. Read-only в старой версии → финальная миграция (`npm run db:import-firestore`) → `DATA_BACKEND=api`
+   и `ADMIN_PIN_HASH`/`ADMIN_TOKEN_SECRET` для Production → Redeploy. Откат — убрать `DATA_BACKEND`
+   и Redeploy; данные, внесённые после переключения, останутся только в Neon
+3. После переключения удалить `src/App.jsx` и Firestore-скрипты из `index.html`
 3. Firestore держим как резерв 2–4 недели, затем удаляем
 
 ## Откат (rollback)

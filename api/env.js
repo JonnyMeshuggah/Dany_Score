@@ -8,6 +8,8 @@ module.exports = (req, res) => {
     FIREBASE_STORAGE_BUCKET: process.env.FIREBASE_STORAGE_BUCKET,
     FIREBASE_MESSAGING_SENDER_ID: process.env.FIREBASE_MESSAGING_SENDER_ID,
     FIREBASE_APP_ID: process.env.FIREBASE_APP_ID,
-    FIREBASE_MEASUREMENT_ID: process.env.FIREBASE_MEASUREMENT_ID
+    FIREBASE_MEASUREMENT_ID: process.env.FIREBASE_MEASUREMENT_ID,
+    // "api" — фронт на API и Neon; иначе — Firestore-версия (docs/MIGRATION_PLAN.md, этапы 5–6)
+    DATA_BACKEND: process.env.DATA_BACKEND === "api" ? "api" : "firestore"
   });
 };
