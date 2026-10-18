@@ -165,6 +165,30 @@ describe("смена пользователя и сессия", () => {
     expect(api.cashOut).not.toHaveBeenCalled();
   });
 
+  it("смена аккаунта, пока читается файл импорта, — файл прежнего пользователя не загружается", async () => {
+    // FileReader, который дочитывает по команде теста
+    const RealReader = window.FileReader;
+    let finishRead;
+    window.FileReader = class {
+      readAsText() { finishRead = () => { this.result = "x"; this.onload(); }; }
+    };
+    try {
+      const auth = fakeAuth();
+      const { api } = renderApp({ auth });
+      await screen.findByText("Баланс: 1000 ₽");
+      fireEvent.change(document.getElementById("importFile"), { target: { files: [new File(["x"], "h.csv")] } });
+      fireEvent.change(within(await screen.findByRole("dialog")).getByLabelText("Введите PIN администратора"), { target: { value: "123456" } });
+      await act(async () => confirmDialog());
+      await waitFor(() => expect(finishRead).toBeTypeOf("function"));
+      await act(async () => auth.emit({ uid: "u2", email: "other@example.com" }));
+      await act(async () => finishRead());
+      expect(screen.queryByText("Загрузить историю из файла и заменить текущую?")).toBeNull();
+      expect(api.importHistory).not.toHaveBeenCalled();
+    } finally {
+      window.FileReader = RealReader;
+    }
+  });
+
   it("повторное уведомление о том же пользователе не сбрасывает экран", async () => {
     const auth = fakeAuth();
     const { api } = renderApp({ auth });

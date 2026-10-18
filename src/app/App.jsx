@@ -103,16 +103,15 @@ export function App({ auth, api }) {
     setQuote(u ? nextQuote() : null);
   }), [auth, api, cancelAll]);
 
-  // Ответ в окне засчитывается только в той сессии, где окно открыли: смена аккаунта (в т.ч. в другой
-  // вкладке) закрывает окно отказом, и действие прежнего пользователя не уйдёт от имени нового
-  const confirm = async (...args) => {
-    const session = sessionRef.current;
-    const ok = await dialogs.confirm(...args);
+  // Действие привязано к сессии, в которой его начали: она фиксируется в начале и передаётся в каждый шаг
+  // (окно, запрос). Смена аккаунта (в т.ч. в другой вкладке) закрывает окна отказом, а оставшиеся шаги
+  // не выполняются — действие прежнего пользователя не уйдёт от имени нового.
+  const confirm = async (message, opts, session = sessionRef.current) => {
+    const ok = await dialogs.confirm(message, opts);
     return ok && session === sessionRef.current;
   };
-  const prompt = async (...args) => {
-    const session = sessionRef.current;
-    const value = await dialogs.prompt(...args);
+  const prompt = async (message, opts, session = sessionRef.current) => {
+    const value = await dialogs.prompt(message, opts);
     return session === sessionRef.current ? value : null;
   };
 
@@ -138,10 +137,10 @@ export function App({ auth, api }) {
   const uid = user?.uid;
   React.useEffect(() => { if (uid) load(); }, [uid, load]);
 
-  // Выполнить запрос: свежее состояние из ответа, ошибка — уведомлением. null — не получилось.
-  const run = React.useCallback(async (action) => {
-    if (busyRef.current) return null;
-    const session = sessionRef.current;
+  // Выполнить запрос: свежее состояние из ответа, ошибка — уведомлением. null — не получилось
+  // (в том числе если сессия, в которой начали действие, уже сменилась).
+  const run = React.useCallback(async (action, session = sessionRef.current) => {
+    if (busyRef.current || session !== sessionRef.current) return null;
     busyRef.current = true;
     setBusy(true);
     try {
@@ -168,11 +167,11 @@ export function App({ auth, api }) {
     }
   }, [api, auth, toast]);
 
-  const ensureAdmin = async () => {
+  const ensureAdmin = async (session) => {
     if (api.isAdmin) return true;
-    const pin = await prompt("Введите PIN администратора", { inputType: "password", inputMode: "numeric", okText: "Открыть" });
+    const pin = await prompt("Введите PIN администратора", { inputType: "password", inputMode: "numeric", okText: "Открыть" }, session);
     if (!pin) return false;
-    return (await run(() => api.unlockAdmin(pin))) !== null;
+    return (await run(() => api.unlockAdmin(pin), session)) !== null;
   };
 
   // ---- Действия
@@ -188,19 +187,21 @@ export function App({ auth, api }) {
   };
 
   const cashOut = async (raw) => {
+    const session = sessionRef.current;
     const amount = parseAmount(raw);
     if (amount === null) { toast("Введите сумму — целое число больше 0", "error"); return false; }
     if (amount > state.balance) { toast("Сумма больше баланса", "error"); return false; }
-    if (!await confirm(`Выдать ${amount} ₽ и уменьшить баланс?`, { okText: "Выдать" })) return false;
-    const res = await run(() => api.cashOut(amount));
+    if (!await confirm(`Выдать ${amount} ₽ и уменьшить баланс?`, { okText: "Выдать" }, session)) return false;
+    const res = await run(() => api.cashOut(amount), session);
     if (res) toast(`💸 Выдано ${amount} ₽`, "success");
     return res !== null;
   };
 
   const deleteEntry = async (entry) => {
+    const session = sessionRef.current;
     const msg = `Удалить запись «${entry.subject}» от ${entry.date} (${formatRub(entry.reward)})?\nБонусы за этот день пересчитаются.`;
-    if (!await confirm(msg, { okText: "Удалить", danger: true })) return;
-    await run(() => api.deleteEntry(entry.id));
+    if (!await confirm(msg, { okText: "Удалить", danger: true }, session)) return;
+    await run(() => api.deleteEntry(entry.id), session);
   };
 
   const claimReward = async (reward) => {
@@ -218,20 +219,24 @@ export function App({ auth, api }) {
   };
 
   const importCSV = async (file) => {
-    if (!await ensureAdmin()) return;
+    const session = sessionRef.current;
+    if (!await ensureAdmin(session)) return;
     let csv;
     try {
       csv = await readText(file);
     } catch {
       return toast("Не удалось прочитать файл", "error");
     }
-    if (!await confirm("Загрузить историю из файла и заменить текущую?", { okText: "Заменить", danger: true })) return;
-    const res = await run(() => api.importHistory(csv));
+    // Пока читался файл, аккаунт мог смениться — тогда файл прежнего пользователя не загружаем
+    if (session !== sessionRef.current) return;
+    if (!await confirm("Загрузить историю из файла и заменить текущую?", { okText: "Заменить", danger: true }, session)) return;
+    const res = await run(() => api.importHistory(csv), session);
     if (res) toast(`✅ Загружено записей: ${res.imported}`, "success");
   };
 
   const openAdmin = async () => {
-    if (await ensureAdmin()) setAdminOpen(true);
+    const session = sessionRef.current;
+    if (await ensureAdmin(session) && session === sessionRef.current) setAdminOpen(true);
   };
 
   useSidebar(Boolean(user), { onExport: exportCSV, onImport: importCSV, onAdmin: openAdmin });
