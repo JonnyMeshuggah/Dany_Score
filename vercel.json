@@ -3,5 +3,8 @@
   "framework": "vite",
   "installCommand": "npm ci",
   "buildCommand": "npm run build",
-  "outputDirectory": "dist"
+  "outputDirectory": "dist",
+  "rewrites": [
+    { "source": "/api/:path((?!env$|router$).*)", "destination": "/api/router?path=:path" }
+  ]
 }
