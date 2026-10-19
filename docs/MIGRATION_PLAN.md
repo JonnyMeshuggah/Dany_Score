@@ -119,15 +119,18 @@ Vercel Functions (/api)
 - [x] Функции, появившиеся в Firestore-версии после этапа 5: «Пятик» (оба фронта), запуск сезона
       «Пробуждение Силы знаний» — `POST /api/admin/season/launch` одной транзакцией (прежний сезон в архив).
       Схема не менялась; откат — откат кода, созданные сезоны (новый активный и архивный) останутся в БД
-- [ ] `DATA_BACKEND=api` в Vercel для Preview и проверка экранов на Preview (человек)
+- [x] `DATA_BACKEND=api` в Vercel для Preview и проверка экранов на Preview (2026-10-18)
 
 ### 6. Переключение
-1. Preview-деплой + миграция копии данных, сверка балансов
-2. Read-only в старой версии → финальная миграция (`npm run db:import-firestore`) → `DATA_BACKEND=api`
-   и `ADMIN_PIN_HASH`/`ADMIN_TOKEN_SECRET` для Production → Redeploy. Откат — убрать `DATA_BACKEND`
-   и Redeploy; данные, внесённые после переключения, останутся только в Neon
-3. После переключения удалить `src/App.jsx` и Firestore-скрипты из `index.html`
-3. Firestore держим как резерв 2–4 недели, затем удаляем
+- [x] Preview-деплой + миграция копии данных, сверка балансов (2026-10-18)
+- [x] Финальная миграция и переключение Production (2026-10-19): бэкап Firestore → сверка (15 пользователей,
+      расхождений нет) → `db:import-firestore --apply` → контрольный бэкап без изменений → `DATA_BACKEND=api`,
+      `ADMIN_PIN_HASH`/`ADMIN_TOKEN_SECRET` для Production → Redeploy. Прод: `/api/env` — `api`, `GET /api/state`
+      основного аккаунта совпал с Firestore; бэкап после переключения тоже без изменений.
+      Режим read-only в старой версии не понадобился: окно между бэкапом и переключением закрыли сверкой бэкапов
+- Откат — убрать `DATA_BACKEND` в Production и Redeploy; данные, внесённые после переключения, есть только в Neon
+- [ ] Через 2–4 недели: удалить `src/App.jsx`, Firestore-скрипты из `index.html` и правила «двух фронтов»;
+      Firestore держать как резерв до этого момента, затем удалить
 
 ## Откат (rollback)
 
