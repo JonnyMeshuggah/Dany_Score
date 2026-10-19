@@ -22,11 +22,10 @@ export function isPresetLoaded(bp) {
   return bp.tasks.some(task => String(task.id).startsWith(ID_PREFIX));
 }
 
-// Признак запущенного пресета для версии на API: в БД у заданий свои id, поэтому смотрим на название
-// сезона и названия заданий пресета (кроме целей по среднему — их текст зависит от истории).
-// Переименование сезона не возвращает кнопку запуска — как и в Firestore-версии.
+// Признак запущенного пресета для версии на API — как isPresetLoaded, но по названиям заданий пресета
+// (в БД у заданий свои id; цели по среднему не берём — их текст зависит от истории). Название сезона
+// не признак: переименование не возвращает кнопку, а сброс сезона (задания удалены) — возвращает.
 export function isPresetSeason(bp) {
-  if (bp.seasonName === PRESET_NAME) return true;
   const names = new Set(loadSeasonPreset(bp, []).tasks.filter(t => t.type !== "average_score").map(t => t.name));
   return bp.tasks.some(task => names.has(task.name));
 }

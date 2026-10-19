@@ -1,8 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
-    "defaultMode": "default",
-    "disableBypassPermissionsMode": "disable",
     "allow": [
       "Bash(npm run check)",
       "Bash(npm run check:*)",
@@ -16,7 +14,27 @@
       "Bash(git branch)",
       "Bash(git push -u origin *)",
       "Bash(gh pr create*)",
-      "Bash(git worktree list*)"
+      "Bash(git worktree list*)",
+      "Bash(npm run *)"
+    ],
+    "deny": [
+      "Bash(git reset --hard*)",
+      "Bash(vercel*)",
+      "Bash(npx vercel*)",
+      "Bash(firebase*)",
+      "Bash(npx firebase*)",
+      "Bash(npm publish*)",
+      "Bash(rm -rf*)",
+      "Read(./secrets/**)",
+      "Read(./backups/**)",
+      "Read(./.env)",
+      "Read(./.env.local)",
+      "Read(./.env.*.local)",
+      "Read(./.env.production)",
+      "Read(./.env.development)",
+      "Read(**/*service-account*.json)",
+      "Edit(./secrets/**)",
+      "Edit(./backups/**)"
     ],
     "ask": [
       "Bash(git commit*)",
@@ -38,25 +56,8 @@
       "Edit(./api/**)",
       "WebFetch"
     ],
-    "deny": [
-      "Bash(git reset --hard*)",
-      "Bash(vercel*)",
-      "Bash(npx vercel*)",
-      "Bash(firebase*)",
-      "Bash(npx firebase*)",
-      "Bash(npm publish*)",
-      "Bash(rm -rf*)",
-      "Read(./secrets/**)",
-      "Read(./backups/**)",
-      "Read(./.env)",
-      "Read(./.env.local)",
-      "Read(./.env.*.local)",
-      "Read(./.env.production)",
-      "Read(./.env.development)",
-      "Read(**/*service-account*.json)",
-      "Edit(./secrets/**)",
-      "Edit(./backups/**)"
-    ]
+    "defaultMode": "default",
+    "disableBypassPermissionsMode": "disable"
   },
   "hooks": {
     "PreToolUse": [
@@ -100,8 +101,17 @@
       ]
     },
     "filesystem": {
-      "allowWrite": ["~/.npm"],
-      "denyRead": ["./secrets", "./backups", "./.env", "./.env.local", "./.env.production", "./.env.development"]
+      "allowWrite": [
+        "~/.npm"
+      ],
+      "denyRead": [
+        "./secrets",
+        "./backups",
+        "./.env",
+        "./.env.local",
+        "./.env.production",
+        "./.env.development"
+      ]
     }
   }
 }

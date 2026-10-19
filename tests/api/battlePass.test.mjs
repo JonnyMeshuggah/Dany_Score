@@ -217,6 +217,16 @@ describe("сезон", () => {
     expect((await as("POST", "/api/admin/season/launch")).status).toBe(409);
   });
 
+  it("после сброса сезона пресет можно запустить снова", async () => {
+    const { as } = await adminUser();
+    await as("POST", "/api/admin/season/launch");
+    await as("POST", "/api/admin/season/reset");
+    const res = await as("POST", "/api/admin/season/launch");
+    expect(res.status).toBe(200);
+    expect(res.body.state.battlePass).toMatchObject({ season: 3, seasonName: "Пробуждение Силы знаний" });
+    expect(res.body.state.battlePass.tasks).toHaveLength(11);
+  });
+
   it("без PIN запуск сезона недоступен", async () => {
     const call = clientFor(app, newUid());
     expect((await call("POST", "/api/admin/season/launch")).status).toBe(403);

@@ -346,9 +346,9 @@ describe("админка и боковая панель", () => {
 
   it("запуск сезона: кнопка, подтверждение, запрос; после запуска кнопки нет", async () => {
     const api = fakeApi();
-    api.launchPresetSeason = vi.fn(async () => ({
-      season: 2, state: makeState({ battlePass: { ...makeState().battlePass, season: 2, seasonName: "Пробуждение Силы знаний" } })
-    }));
+    const { loadSeasonPreset } = await import("../../src/domain/seasonPreset.js");
+    const launched = loadSeasonPreset(makeState().battlePass, []);
+    api.launchPresetSeason = vi.fn(async () => ({ season: 2, state: makeState({ battlePass: launched }) }));
     renderApp({ api });
     await openAdmin();
     fireEvent.click(await screen.findByRole("button", { name: "🚀 Запустить сезон «Пробуждение Силы знаний»" }));

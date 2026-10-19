@@ -14,8 +14,8 @@ const history = [5, 5, 5, 5, 5, 4, 4, 4, 4, 4].map(grade);
 
 describe("признак запущенного пресета для версии на API", () => {
   const base = { season: 1, seasonName: "Осень", maxLevel: 10, xpPerLevel: 200, tasks: [], rewards: [] };
-  it("по названию сезона", () => {
-    expect(isPresetSeason({ ...base, seasonName: PRESET_NAME })).toBe(true);
+  it("название без заданий пресета (после сброса сезона) — не запущен", () => {
+    expect(isPresetSeason({ ...base, seasonName: PRESET_NAME })).toBe(false);
     expect(isPresetSeason(base)).toBe(false);
   });
   it("по заданиям пресета, даже если сезон переименован и id заданий другие", () => {
