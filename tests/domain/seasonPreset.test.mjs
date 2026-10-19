@@ -23,6 +23,15 @@ describe("признак запущенного пресета для верси
     expect(isPresetSeason({ ...base, seasonName: "Моя версия", tasks })).toBe(true);
     expect(isPresetSeason({ ...base, tasks: [{ id: 1, name: "3 пятёрки", type: "streak_fives", xp: 100 }] })).toBe(false);
   });
+  it("одно задание с именем из пресета — не запущен; без пары заданий пресета — всё ещё запущен", () => {
+    const tasks = loadSeasonPreset(base, []).tasks;
+    expect(isPresetSeason({ ...base, tasks: [tasks[2]] })).toBe(false);
+    expect(isPresetSeason({ ...base, tasks: tasks.slice(2) })).toBe(true);
+  });
+  it("совпадение только по названию (другие XP или цель) не считается", () => {
+    const tasks = loadSeasonPreset(base, []).tasks.map(x => ({ ...x, xp: x.xp + 1 }));
+    expect(isPresetSeason({ ...base, tasks })).toBe(false);
+  });
 });
 
 describe("пресет сезона", () => {
