@@ -28,6 +28,12 @@ describe("признак запущенного пресета для верси
     expect(isPresetSeason({ ...base, tasks: [tasks[2]] })).toBe(false);
     expect(isPresetSeason({ ...base, tasks: tasks.slice(2) })).toBe(true);
   });
+  it("граница — ровно половина: 4 из 8 заданий с постоянной целью — запущен, 3 из 8 — нет", () => {
+    const fixed = loadSeasonPreset(base, []).tasks.filter(x => x.type !== "average_score");
+    expect(fixed).toHaveLength(8);
+    expect(isPresetSeason({ ...base, tasks: fixed.slice(0, 4) })).toBe(true);
+    expect(isPresetSeason({ ...base, tasks: fixed.slice(0, 3) })).toBe(false);
+  });
   it("совпадение только по названию (другие XP или цель) не считается", () => {
     const tasks = loadSeasonPreset(base, []).tasks.map(x => ({ ...x, xp: x.xp + 1 }));
     expect(isPresetSeason({ ...base, tasks })).toBe(false);
