@@ -29,6 +29,21 @@ describe("поиск выполненных заданий", () => {
     expect(findCompletedTasks(bp({ tasks: [streak] }), history.slice(0, 1), NOW)).toEqual([]);
   });
 
+  it("streak_fives: выдача денег, бонус и награда пропуска серию не рвут — рвут только другие оценки", () => {
+    const three = { ...streak, target: 3 };
+    const money = [
+      { grade: "—", subject: "💸 Выдано", reward: -500, date: "17.10.2026" },
+      { grade: "—", subject: "🎁 Бонус от администратора", reward: 300, date: "17.10.2026" },
+      { grade: "—", subject: "🏆 Награда BP (Ур.1)", reward: 500, date: "17.10.2026" }
+    ];
+    const five = { grade: 5, date: "17.10.2026" };
+    const history = [five, money[0], five, money[1], money[2], five];
+    expect(findCompletedTasks(bp({ tasks: [three] }), history, NOW).map(t => t.id)).toEqual(["s"]);
+    // Четвёрка внутри — серия рвётся
+    const broken = [five, money[0], five, { grade: 4, date: "17.10.2026" }, five];
+    expect(findCompletedTasks(bp({ tasks: [three] }), broken, NOW)).toEqual([]);
+  });
+
   it("total_grades_week: записи за последние 7 дней", () => {
     const history = [{ grade: 4, date: "17.10.2026" }, { grade: 4, date: "01.10.2026" }];
     expect(findCompletedTasks(bp({ tasks: [week] }), history, NOW)).toEqual([]);
