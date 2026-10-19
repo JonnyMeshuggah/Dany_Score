@@ -23,7 +23,8 @@ export function findCompletedTasks(bp, history, now = new Date()) {
     if (bp.completedTasks.includes(task.id)) return false;
 
     if (task.type === 'streak_fives') {
-      const recentGrades = history.slice(0, task.target || 3);
+      // Только оценки: выдача денег, бонусы и награды (оценка «—», «н») серию не рвут
+      const recentGrades = history.filter(h => typeof h.grade === 'number').slice(0, task.target || 3);
       return recentGrades.length >= (task.target || 3) && recentGrades.every(h => h.grade === 5);
     }
     if (task.type === 'total_grades_week') {
