@@ -6,7 +6,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { createTestDb, createTestApp, clientFor } from "../api/helpers.mjs";
+import { createTestDb, createTestApp, clientFor, PIN } from "../api/helpers.mjs";
 import { planUser, planDump, applyUser, ruDateToISO, CORRECTION_SUBJECT } from "../../server/migration/firestore.mjs";
 
 const NOW = new Date("2026-10-17T12:00:00Z");
@@ -230,6 +230,17 @@ describe("запись в Postgres", () => {
 
   const migrate = (uid, data, opts) => applyUser(env.db, planUser({ id: uid, data }, { now: NOW, ...opts }));
   const stateOf = async (uid) => (await clientFor(app, uid)("GET", "/api/state")).body;
+
+  it("пресет, запущенный в Firestore-версии, после переноса считается запущенным (кнопки и повторного запуска нет)", async () => {
+    const { loadSeasonPreset } = await import("../../src/domain/seasonPreset.js");
+    const data = fullUser();
+    data.battlePass = { ...loadSeasonPreset(data.battlePass, []), seasonName: "Переименованный" };
+    await migrate("m-preset", data);
+    const call = clientFor(app, "m-preset");
+    const admin = (await call("POST", "/api/admin/unlock", { pin: PIN })).body.token;
+    const res = await call("POST", "/api/admin/season/launch", {}, { admin });
+    expect(res.status).toBe(409);
+  });
 
   it("API после переноса видит те же баланс, историю в том же порядке и боевой пропуск", async () => {
     await migrate("m-full", fullUser());

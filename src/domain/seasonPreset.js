@@ -22,6 +22,17 @@ export function isPresetLoaded(bp) {
   return bp.tasks.some(task => String(task.id).startsWith(ID_PREFIX));
 }
 
+// Признак запущенного пресета для версии на API (в БД у заданий свои id, isPresetLoaded не подходит):
+// в сезоне не меньше половины заданий пресета с постоянной целью — совпадают название, тип, цель и XP
+// (цели по среднему зависят от истории — их не сравниваем). Название сезона не признак: переименование
+// не возвращает кнопку, сброс сезона (задания удалены) — возвращает; одно случайное совпадение — тоже.
+const taskKey = (t) => JSON.stringify([t.name, t.type, t.target ?? null, t.xp]);
+export function isPresetSeason(bp) {
+  const preset = loadSeasonPreset(bp, []).tasks.filter(t => t.type !== "average_score").map(taskKey);
+  const present = new Set(bp.tasks.map(taskKey));
+  return preset.filter(key => present.has(key)).length * 2 >= preset.length;
+}
+
 // Новое состояние пропуска: следующий сезон, задания и награды пресета, прогресс с нуля
 export function loadSeasonPreset(bp, history) {
   const [a1, a2, a3] = averageTargets(history);

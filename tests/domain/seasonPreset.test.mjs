@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { loadSeasonPreset, isPresetLoaded, PRESET_NAME } from "../../src/domain/seasonPreset.js";
+import { loadSeasonPreset, isPresetLoaded, isPresetSeason, PRESET_NAME } from "../../src/domain/seasonPreset.js";
 import { findCompletedTasks, levelFromXP } from "../../src/domain/battlePass.js";
 
 const oldBp = {
@@ -11,6 +11,34 @@ const oldBp = {
 const grade = (g, i) => ({ id: String(i), date: "01.10.2026", subject: "А", grade: g });
 // 10 оценок, средний 4.5
 const history = [5, 5, 5, 5, 5, 4, 4, 4, 4, 4].map(grade);
+
+describe("признак запущенного пресета для версии на API", () => {
+  const base = { season: 1, seasonName: "Осень", maxLevel: 10, xpPerLevel: 200, tasks: [], rewards: [] };
+  it("название без заданий пресета (после сброса сезона) — не запущен", () => {
+    expect(isPresetSeason({ ...base, seasonName: PRESET_NAME })).toBe(false);
+    expect(isPresetSeason(base)).toBe(false);
+  });
+  it("по заданиям пресета, даже если сезон переименован и id заданий другие", () => {
+    const tasks = loadSeasonPreset(base, []).tasks.map((x, i) => ({ ...x, id: 100 + i }));
+    expect(isPresetSeason({ ...base, seasonName: "Моя версия", tasks })).toBe(true);
+    expect(isPresetSeason({ ...base, tasks: [{ id: 1, name: "3 пятёрки", type: "streak_fives", xp: 100 }] })).toBe(false);
+  });
+  it("одно задание с именем из пресета — не запущен; без пары заданий пресета — всё ещё запущен", () => {
+    const tasks = loadSeasonPreset(base, []).tasks;
+    expect(isPresetSeason({ ...base, tasks: [tasks[2]] })).toBe(false);
+    expect(isPresetSeason({ ...base, tasks: tasks.slice(2) })).toBe(true);
+  });
+  it("граница — ровно половина: 4 из 8 заданий с постоянной целью — запущен, 3 из 8 — нет", () => {
+    const fixed = loadSeasonPreset(base, []).tasks.filter(x => x.type !== "average_score");
+    expect(fixed).toHaveLength(8);
+    expect(isPresetSeason({ ...base, tasks: fixed.slice(0, 4) })).toBe(true);
+    expect(isPresetSeason({ ...base, tasks: fixed.slice(0, 3) })).toBe(false);
+  });
+  it("совпадение только по названию (другие XP или цель) не считается", () => {
+    const tasks = loadSeasonPreset(base, []).tasks.map(x => ({ ...x, xp: x.xp + 1 }));
+    expect(isPresetSeason({ ...base, tasks })).toBe(false);
+  });
+});
 
 describe("пресет сезона", () => {
   it("следующий сезон, прогресс и бейджи с нуля", () => {

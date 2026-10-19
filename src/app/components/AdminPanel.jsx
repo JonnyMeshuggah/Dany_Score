@@ -2,6 +2,7 @@
 // запросы — с токеном админки, полученным по PIN.
 import React from "react";
 import { TASK_TYPES, parseAmount } from "../constants.js";
+import { PRESET_NAME, isPresetSeason } from "../../domain/seasonPreset.js";
 
 const del = (onClick, label, busy) => (
   <button className="text-btn" onClick={onClick} disabled={busy} aria-label={label} style={{ marginLeft: "8px" }}>
@@ -81,6 +82,13 @@ export function AdminPanel({ bp, busy, run, api, dialogs, onClose }) {
     }
   };
 
+  const launchPreset = async () => {
+    if (!await confirm(`Запустить сезон «${PRESET_NAME}»? Задания, награды, уровень и бейджи текущего сезона заменятся. Баланс и история не изменятся.`,
+      { okText: "Запустить" })) return;
+    const res = await run(() => api.launchPresetSeason());
+    if (res) toast(`🚀 Сезон «${PRESET_NAME}» запущен`, "success");
+  };
+
   const resetSeason = async () => {
     if (!await confirm("Сбросить сезон? Удалятся все задания, награды и прогресс. Деньги в истории останутся.",
       { okText: "Сбросить", danger: true })) return;
@@ -103,6 +111,11 @@ export function AdminPanel({ bp, busy, run, api, dialogs, onClose }) {
           <span className="muted" style={{ fontSize: "13px" }}>Сезон #{bp.season}</span>
           <button type="submit" disabled={busy || seasonName.trim() === bp.seasonName}>Сохранить</button>
         </div>
+        {!isPresetSeason(bp) && (
+          <button type="button" onClick={launchPreset} disabled={busy} style={{ marginTop: "8px", width: "100%" }}>
+            🚀 Запустить сезон «{PRESET_NAME}»
+          </button>
+        )}
       </form>
 
       <div className="section">
